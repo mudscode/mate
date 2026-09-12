@@ -24,6 +24,9 @@ sem = asyncio.Semaphore(6)               # cap concurrent model calls during bac
 
 
 def is_staff(member) -> bool:
+    guild = getattr(member, "guild", None)
+    if guild is not None and guild.owner_id == member.id:   # server owner counts as instructor (solo demo)
+        return True
     return any(r.name in STAFF_ROLES for r in getattr(member, "roles", []))
 
 
