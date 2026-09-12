@@ -28,6 +28,8 @@ def init():
             id INTEGER PRIMARY KEY, chat_id INTEGER, title TEXT, kind TEXT,
             due_at TEXT, details TEXT, source_msg_id INTEGER, confidence REAL,
             created_at TEXT, status TEXT DEFAULT 'active', key TEXT);
+        CREATE TABLE IF NOT EXISTS notes(
+            id INTEGER PRIMARY KEY, chat_id INTEGER, author TEXT, note TEXT, created_at TEXT);
         CREATE TABLE IF NOT EXISTS reminders(
             id INTEGER PRIMARY KEY, event_id INTEGER, kind TEXT, sent_at TEXT,
             UNIQUE(event_id, kind));
@@ -89,6 +91,27 @@ def search_messages(query, limit=20):
         return [dict(r) for r in c.execute(
             "SELECT sender,text,ts FROM messages WHERE text LIKE ? ORDER BY ts DESC LIMIT ?",
             (f"%{query}%", limit))]
+
+
+def recent_messages(since, chat_id=None, limit=80):
+    q, args = "SELECT sender,text,ts FROM messages WHERE ts >= ? AND text != ''", [since]
+    if chat_id:
+        q += " AND chat_id=?"; args.append(chat_id)
+    with conn() as c:
+        return [dict(r) for r in c.execute(q + " ORDER BY ts LIMIT ?", args + [limit])]
+
+
+def add_note(chat_id, author, note):
+    with conn() as c:
+        c.execute("INSERT INTO notes(chat_id,author,note,created_at) VALUES(?,?,?,?)", (chat_id, author, note, now_local()))
+
+
+def search_notes(query, chat_id=None, limit=10):
+    q, args = "SELECT author,note,created_at FROM notes WHERE note LIKE ?", [f"%{query}%"]
+    if chat_id:
+        q += " AND chat_id=?"; args.append(chat_id)
+    with conn() as c:
+        return [dict(r) for r in c.execute(q + " ORDER BY created_at DESC LIMIT ?", args + [limit])]
 
 
 def due_reminders():

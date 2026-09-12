@@ -82,7 +82,7 @@ async def on_message(message: discord.Message):
     if bot.user in message.mentions or replied_to_bot or looks_like_question(message.content):
         q = message.content.replace(bot.user.mention, "").strip()
         async with message.channel.typing():
-            reply = await qa.answer(q, message.author.display_name)
+            reply = await qa.answer(q, message.author.display_name, message.channel.id)
         await message.reply(reply, mention_author=False)
         return
 
