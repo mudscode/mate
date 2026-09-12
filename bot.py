@@ -1,6 +1,7 @@
 """Discord entry point. Run: python bot.py"""
 import asyncio
 import os
+import re
 from datetime import datetime
 
 import discord
@@ -18,8 +19,8 @@ intents.message_content = True          # also enable "Message Content Intent" i
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 STAFF_ROLES = {"Instructor", "TA", "Admin"}
-QUESTION_HINTS = ("when", "where", "what", "which", "deadline", "due", "quiz", "exam", "assignment", "?")
-EMOJI = {"deadline": "📝", "quiz": "❓", "exam": "📚", "class_change": "🔁", "announcement": "📢"}
+QUESTION_HINTS = ("when", "where", "what", "which", "who", "how", "deadline", "due", "remind", "missed", "miss")
+EMOJI = {"deadline": "📝", "quiz": "❓", "exam": "📚", "class_change": "🔁", "announcement": "📢", "plan": "🎒"}
 sem = asyncio.Semaphore(6)               # cap concurrent model calls during backfill
 
 
@@ -31,8 +32,9 @@ def is_staff(member) -> bool:
 
 
 def looks_like_question(text: str) -> bool:
+    """A question aimed at memory ('when is the quiz?'), not a plan phrased as a question ('trip on Sunday?')."""
     t = text.lower()
-    return t.endswith("?") or (len(t.split()) <= 15 and any(h in t for h in QUESTION_HINTS) and "?" in t)
+    return "?" in t and len(t.split()) <= 20 and any(re.search(rf"\b{h}\b", t) for h in QUESTION_HINTS)
 
 
 async def ingest(message: discord.Message, react: bool = True) -> int:

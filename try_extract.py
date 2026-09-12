@@ -11,6 +11,8 @@ SAMPLES = [
     ("TA",  True,  "Assignment 2 deadline extended to Friday midnight, submit on LMS"),
     ("Sara",False, "i think quiz might be next week? not sure"),
     ("Sir", True,  "Tomorrow's lecture is in Room 204 instead of the lab"),
+    ("Ali", False, "@everyone anyone up for a day road trip to Murree on Sunday? leaving 7am from the main gate"),
+    ("Sara",False, "study session for quiz 2 at the library tomorrow 6pm, bring the slides"),
 ]
 
 async def main():

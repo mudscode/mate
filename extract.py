@@ -18,9 +18,10 @@ MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 
 class Event(BaseModel):
     key: str = Field(description="Stable slug for the THING, not its date: 'quiz-3', 'assignment-2', 'midterm', "
-                                 "'lecture-room-change'. Never put a date in the key. A reschedule or correction of the same item MUST reuse the same key.")
+                                 "'lecture-room-change', 'murree-trip'. Never put a date in the key. A reschedule or correction of the same item MUST reuse the same key.")
     title: str = Field(description="Short, e.g. 'Quiz 3 (Ch. 5)', 'Assignment 2 due', 'Lecture moved to Room 204'")
-    kind: Literal["deadline", "quiz", "exam", "class_change", "announcement"]
+    kind: Literal["deadline", "quiz", "exam", "class_change", "announcement", "plan"] = Field(
+        description="plan = anything social or organised by students: trip, study session, meetup, party, match.")
     due_at: Optional[str] = Field(
         description="Local datetime 'YYYY-MM-DDTHH:MM' in Asia/Karachi. Resolve relative dates from the message "
                     "timestamp. If a day but no time is given use 23:59 for deadlines and 09:00 otherwise. "
@@ -33,11 +34,14 @@ class Extraction(BaseModel):
     events: List[Event]
 
 
-SYSTEM = """You watch a university course group chat and extract only concrete, actionable facts.
+SYSTEM = """You are the memory of a class group chat (students plus instructor). Extract anything the group
+will need to remember later: deadlines, quizzes, exams, class/room/time changes, announcements, and plans the
+students make among themselves (trips, study sessions, meetups, parties, matches).
 
 Extract an event ONLY when the message states something with a real date, day, or clear relative time
 (tomorrow, Friday, next Monday, 'by end of week'). Vague talk ('quiz soon', 'we should study') is NOT an event.
-Chit-chat, jokes, questions, and complaints produce an empty list.
+Chit-chat, jokes, and complaints produce an empty list. A proposal with a concrete time ('road trip Sunday,
+leaving 7am?') IS a plan, even if phrased as a question.
 
 Messages marked [instructor/staff] are authoritative: extract with high confidence.
 A student relaying an instructor ('sir said quiz is Monday') is medium confidence.
