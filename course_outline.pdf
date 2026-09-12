@@ -1,0 +1,32 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 860 >>
+stream
+BT /F1 11 Tf 50 780 Td 16 TL (CS-321 Operating Systems - Course Outline, Fall 2026) Tj T* (Instructor: Dr. Ahmed. Lectures Mon/Wed 10:00, Room 104.) Tj T* () Tj T* (Assessment schedule:) Tj T* (Quiz 1        Wed 9 Sep 2026, 10:00    Chapters 1-2) Tj T* (Quiz 2        Wed 16 Sep 2026, 10:00   Chapters 3-4) Tj T* (Assignment 1  Fri 18 Sep 2026, 23:59   Scheduling simulator \(LMS\)) Tj T* (Project proposal  Mon 28 Sep 2026, 17:00   2 pages, groups of 3) Tj T* (Midterm exam  Mon 5 Oct 2026, 09:00-11:00   Main Auditorium, Ch 1-6) Tj T* (Quiz 4        Wed 21 Oct 2026, 10:00   Chapters 7-8) Tj T* (Assignment 2  Fri 30 Oct 2026, 23:59   Memory allocator) Tj T* (Quiz 5        Wed 11 Nov 2026, 10:00   Chapters 9-10) Tj T* (Project demo  Mon 30 Nov 2026, 14:00   Lab 2) Tj T* (Final exam    Mon 14 Dec 2026, 09:00-12:00   Main Auditorium, all chapters) Tj T* ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001152 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1220
+%%EOF

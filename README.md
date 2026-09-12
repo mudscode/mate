@@ -17,3 +17,7 @@ Paste a real class chat into the channel (one message per line is fine), then `!
 - `!schedule [days]` – dump upcoming events (fallback for Q&A)
 - `!tick` – run the reminder check now (demo)
 - Mention the bot, reply to it, or ask a question ending in `?` to query memory.
+
+## Demo assets
+- `seed_chat.txt` – paste into the class channel as one message; the bot extracts ~10 events from it
+- `course_outline.pdf` – drop into the channel; adds the rest of the semester in one go

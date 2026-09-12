@@ -1,0 +1,14 @@
+Welcome to CS-321 Operating Systems, Fall 2026. Lectures Mon/Wed 10am in Room 104, lab Friday 2pm.
+Assignment 1 (process scheduling simulator) is due Friday 18 September 11:59pm on LMS. Late submissions lose 10% per day.
+Quiz 2 will be on Wednesday 16 September at 10am, chapters 3 and 4. 15 minutes, closed book.
+sir can we get the slides for lecture 4 uploaded
+Slides for lecture 4 are on LMS now.
+Quiz 3 will be on Monday 21 September at 10am, chapters 5 and 6. Same room.
+Note: Wednesday 23 September lecture is cancelled, I am at a conference. We will cover the material the following Monday.
+Lab 3 on Friday 25 September will be a graded lab. Bring your laptop with the VM set up.
+anyone want to form a group for the project
+Project proposal (2 pages max) is due Monday 28 September 5pm. Groups of 3. Email me your group members by Wednesday 23 September.
+Midterm exam is on Monday 5 October, 9am to 11am, in the Main Auditorium. Covers chapters 1 to 6.
+TA office hours moved to Tuesdays 3pm to 5pm, CS building room 12, starting next week.
+lol did anyone actually understand the semaphore example
+Reminder from the department: fee submission deadline is Friday 2 October. Not my area but please do not get your registration cancelled.
