@@ -60,8 +60,8 @@ def upsert_event(ev, chat_id, source_msg_id) -> str:
                     match = r
                     break
         if match:
-            c.execute("UPDATE events SET title=?, due_at=?, details=?, source_msg_id=?, confidence=? WHERE id=?",
-                      (ev.title, ev.due_at, ev.details, source_msg_id, ev.confidence, match["id"]))
+            c.execute("UPDATE events SET key=?, title=?, due_at=?, details=?, source_msg_id=?, confidence=? WHERE id=?",
+                      (ev.key, ev.title, ev.due_at, ev.details, source_msg_id, ev.confidence, match["id"]))
             if match["due_at"] != ev.due_at:
                 c.execute("DELETE FROM reminders WHERE event_id=?", (match["id"],))
             return "updated"
