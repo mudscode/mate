@@ -53,10 +53,18 @@ A student relaying an instructor ('sir said quiz is Monday') is medium confidenc
 A student guessing ('I think the quiz is Monday?') is low confidence.
 
 For a course outline, syllabus, or schedule document, extract every dated item as its own event.
-Never invent dates. If a date is genuinely unspecified, set due_at to null."""
+Never invent dates. If a date is genuinely unspecified, set due_at to null.
+
+Messages may be in English, Urdu, or Roman Urdu mixed with English ('kal quiz hai 10 baje ch 5',
+'sir ne kaha assignment jumma tak LMS pe submit karni hai'). Understand them the same way; write titles and
+details in English. Roman Urdu time words: kal = tomorrow, parso = day after tomorrow, agle hafte = next week,
+subah = morning, sham = evening, raat = night, baje = o'clock; days: peer/somwar = Monday, mangal = Tuesday,
+budh = Wednesday, jumeraat = Thursday, jumma = Friday, hafta = Saturday, itwar = Sunday."""
 
 
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+URDU_DAYS = {"peer": 0, "somwar": 0, "mangal": 1, "budh": 2, "jumeraat": 3, "jumerat": 3, "jumma": 4, "juma": 4,
+             "hafta": 5, "itwar": 6}
 
 
 def _plausible(e: Event, anchor: datetime, text: str = "") -> bool:
@@ -69,14 +77,21 @@ def _plausible(e: Event, anchor: datetime, text: str = "") -> bool:
         due = datetime.fromisoformat(e.due_at)
     except ValueError:
         return False
+    if e.kind == "deadline" and due.hour == 0 and due.minute == 0:   # "Friday midnight" means end of Friday
+        due = due - timedelta(minutes=1)
+        e.due_at = due.strftime("%Y-%m-%dT%H:%M")
     a = anchor.replace(tzinfo=None)
-    if not (a - timedelta(days=2) <= due <= a + timedelta(days=200)):
+    if not (a - timedelta(hours=1) <= due <= a + timedelta(days=200)):   # nothing is announced after it happened
         return False
     t = text.lower()
     named = [i for i, w in enumerate(WEEKDAYS) if re.search(rf"\b{w[:3]}[a-z]*\b", t)]
-    if len(named) == 1 and due.weekday() != named[0]:
+    named += [d for w, d in URDU_DAYS.items() if re.search(rf"\b{w}\b", t)]
+    if len(set(named)) == 1 and due.weekday() != named[0]:
         return False
-    if "tomorrow" in t and due.date() != (a + timedelta(days=1)).date():
+    if re.search(r"\b(tomorrow|kal)\b", t) and not re.search(r"\bparso\b", t) \
+            and due.date() != (a + timedelta(days=1)).date():
+        return False
+    if re.search(r"\bparso\b", t) and due.date() != (a + timedelta(days=2)).date():
         return False
     return True
 
