@@ -13,7 +13,8 @@ QUESTION_STARTERS = ("when", "where", "what", "whats", "what's", "who", "how", "
 EMOJI = {"deadline": "📝", "quiz": "❓", "exam": "📚", "class_change": "🔁", "announcement": "📢", "plan": "🎒"}
 
 sem = asyncio.Semaphore(6)               # cap concurrent model calls during backfill
-db_lock = asyncio.Lock()                 # upsert + Discord-event sync must not interleave across messages
+db_lock = asyncio.Lock()                 # upserts from concurrent messages must not interleave
+_sync_locks: dict[int, asyncio.Lock] = {}   # one per event id: Discord mirroring is rate-limited and slow
 
 
 def is_staff(member) -> bool:
@@ -79,7 +80,7 @@ async def ingest(message: discord.Message, react: bool = True) -> int:
     for eid, status in logged:
         await hooks.fire(hooks.EVENT_LOGGED, message, db.get_event(eid), status)
     for eid, _ in logged:                     # mirror to the Events tab last: Discord rate-limits these calls
-        async with db_lock:
+        async with _sync_locks.setdefault(eid, asyncio.Lock()):   # same event never mirrored twice at once
             deid = await discord_events.sync(message.guild, db.get_event(eid))
             if deid is not None:
                 db.set_discord_event_id(eid, deid)
