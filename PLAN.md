@@ -125,3 +125,12 @@ Telegram login was a blocker. Discord is easier and the plan is otherwise unchan
 - Demo assets committed: `seed_chat.txt` (paste as one message) and `course_outline.pdf`.
 
 Revised cut line: Behind at 15:30 → drop Discord Events mirror and heads-ups; the core demo already works.
+
+## 13:00–14:00 additions
+- Package reorg: code moved into `mate/` (`config`, `db`, `extract`, `qa`, `tools`, `handlers`, `reminders`, `discord_events`) with `bot.py` as a thin entry point, plus `mate/hooks.py` — `on_event_logged` / `on_message_ingested` / `on_tick`, errors printed and swallowed — so a feature is one file in `mate/features/` listed in `ALL` and `bot.py` never changes again.
+- Tests: `tests/fakes.py` fakes just enough discord.py (guild, channel, message, user, bot, scheduled events, polls, DMs) that handlers, hooks and every feature run offline against a throwaway DB; `scripts/test.sh` runs the suite, `RUN_LIVE=1` adds `tests/test_live.py` (real model calls); `scripts/e2e.py <channel_id>` drives real Discord with a second tester bot (`MATE_TEST_BOT_TOKEN`, `MATE_TEST_BOT_IDS`, and `config.TEST_BOT_IDS` so Mate treats it as human); `scripts/reset.py` wipes `mate.db` and the bot's own scheduled events for a clean stage.
+- `features/polls.py`: a newly logged `plan` gets a native Discord RSVP poll in the same channel, closing when the plan starts (clamped to Discord's 1h–7d window); `plan_poll` tool finds it again.
+- `features/resources.py`: every file and link dropped in chat is indexed with a jump link, keyed `(msg_id, title)` so `!backfill` can't duplicate; `find_resources` tool answers "where are the lecture 4 slides?" with a clickable link.
+- `features/personal_reminders.py`: `remind_me` / `my_reminders` tools — "remind me 2 hours before assignment 1" stores (user, event, hours_before) and DMs only that student; fire times are recomputed every tick from the event row, so a reschedule drags the reminder with it.
+- `features/digest.py`: unprompted Sunday-evening (18:00 Asia/Karachi) "This week" post into each server's busiest channel, once per ISO week, grouped by day and truncated under Discord's 2000-char cap; `!digest` renders the same text on demand.
+- Memory scoped per server: `guild_id` on messages, events, notes and every query, so one bot can sit in several courses; `chat_id` is now only where to post back.

@@ -12,7 +12,7 @@ Built solo for the AI Tinkerers "Agents, Everywhere" hackathon, Islamabad, 12 Se
 Pitch: it decides what to log, remembers across sessions, and acts unprompted. Agent, not chatbot.
 
 ## Hard constraints
-- Deadline is today. Prefer the smallest change that makes the demo work. No refactors, no new frameworks.
+- Demo is today. Prefer the smallest change that makes the demo work. No new frameworks or dependencies.
 - LLM provider is OpenAI (Responses API) and only OpenAI. Do not introduce any other provider or SDK.
 - One Python process: discord.py + openai + sqlite3. No web server, no queue, no ngrok.
 - Never let the model do date arithmetic that Python can check. Model proposes ISO datetime, Python validates.
@@ -20,42 +20,70 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
   replied to, or asked a question.
 
 ## Layout
-- `bot.py`      Discord client, handlers, `!backfill` `!schedule` `!tick`, 10-min reminder loop
-- `extract.py`  message + attachments -> list[Event] via `responses.parse` + Pydantic schema
-- `tools.py`    `@tool` registry -> `TOOLS` / `dispatch`; `list_events` `search_messages` `recent_messages` `remember`
-- `qa.py`       Responses API function-calling loop over `tools.TOOLS`, scoped to the asking channel
-- `discord_events.py`  mirrors dated events into the server's native Events tab; updates on reschedule
-- `db.py`       SQLite: messages, events (deduped by model-generated `key`), notes, reminders
-- `try_extract.py`  offline extraction test, run this before touching Discord
-- `PLAN.md`     timeline, cut lines, demo script, gotchas. Read it.
+- `bot.py`                  entry point: client, `!backfill` `!schedule` `!tick`, 10-min loop, `features.setup_all(bot)`
+- `mate/config.py`          loads `.env`; `TZ` `MODEL` `DB_PATH` `STAFF_ROLES` `TEST_BOT_IDS`
+- `mate/db.py`              SQLite: messages, events (deduped by model-generated `key`), notes, reminders
+- `mate/extract.py`         message + attachments -> list[Event] via `responses.parse` + Pydantic schema
+- `mate/qa.py`              Responses API function-calling loop over `tools.TOOLS`, scoped to the asker's server
+- `mate/tools.py`           `@tool` registry -> `TOOLS` / `dispatch`; handlers get a ctx dict first
+- `mate/handlers.py`        ingest (store, extract, react, heads-up), question routing, fires hooks
+- `mate/reminders.py`       24h/2h nudges posted back to the channel the item came from
+- `mate/discord_events.py`  mirrors dated events into the server's native Events tab; updates on reschedule
+- `mate/hooks.py`           `on_event_logged` / `on_message_ingested` / `on_tick`; errors are printed, not raised
+- `mate/features/`          `polls.py` `resources.py` `personal_reminders.py` `digest.py` — one file each
+- `tests/`                  `fakes.py` (fake discord.py) + unit tests; `test_live.py` gated by `RUN_LIVE=1`
+- `scripts/`                `test.sh` `try_extract.py` `e2e.py` `reset.py`
+- `demo/`                   `seed_chat.txt` (paste as one message), `course_outline.pdf`
+- `PLAN.md`                 timeline, cut lines, demo script, gotchas. Read it.
+
+## How to add a feature
+1. One module in `mate/features/`. Register `@hooks.on_*` callbacks and `@tools.tool` functions at import time.
+2. `def setup(bot)` runs its own `CREATE TABLE IF NOT EXISTS` and registers any `@bot.command()`.
+3. Add the module to `ALL` in `mate/features/__init__.py`. `bot.py` never changes.
+4. Write `tests/test_<name>.py` against `tests/fakes.py` — no Discord, no network.
+
+## Testing
+- `scripts/test.sh` — the offline suite: fakes for discord.py, a throwaway DB, no network.
+- `RUN_LIVE=1 scripts/test.sh` — also runs `tests/test_live.py`, which makes real model calls.
+- `python scripts/e2e.py <channel_id>` — real Discord: a second "tester" bot posts and asserts against a
+  running `bot.py`. Needs `MATE_TEST_BOT_TOKEN` and `MATE_TEST_BOT_IDS` in `.env`.
+- `python scripts/reset.py` — fresh start: deletes `mate.db` and every scheduled event this bot created.
 
 ## Conventions
 - Datetimes are ISO local strings `YYYY-MM-DDTHH:MM` in Asia/Karachi; string comparison orders them.
 - Reasoning effort: `low` for chat lines, `medium` for documents. Model from `OPENAI_MODEL`, default `gpt-5-mini`.
+- Memory is scoped per server (`guild_id`); `chat_id` is the channel an item came from, used for posting back.
 - Event kinds: `deadline` `quiz` `exam` `class_change` `announcement` `plan`. `plan` is student-organised
   stuff (trips, study sessions, meetups) — Mate is the group's memory, not just course admin.
-- Events dedupe on `(chat_id, kind, key)`. A reschedule updates in place and clears its reminders.
+- Events dedupe on the model's `key` within a server; fallback is same kind at the same minute, or a
+  near-identical title within a day. A reschedule updates in place and clears its reminders.
 - Every dated event is mirrored as a native Discord scheduled event; the bot needs the **Manage Events**
   permission (invite permissions integer `283467942976`).
 - `notes` table holds free-form facts from "remember that ..."; `search_messages` searches notes too.
-- Adding a Q&A tool = one decorated function in `tools.py`. The schema is built from the signature.
-- Reminders fire once at 24h and once at 2h before `due_at`.
+- Q&A tools: `list_events` `search_messages` `recent_messages` `remember` (core) and `remind_me`
+  `my_reminders` `plan_poll` `find_resources` (features). Adding one = one decorated function; the schema
+  is built from the signature.
+- Features own their tables (`polls`, `resources`, `personal_reminders`, `digests`) and create them on demand.
+- Reminders fire once at 24h and once at 2h before `due_at`, in-channel. Personal reminders are DMs and
+  recompute their fire time every tick, so a rescheduled event drags them along.
 - Heads-up: when a newly logged event lands on the same day as an existing one, Mate posts one
   unprompted line pointing out the clash.
-- Question routing: a message is answered only if it contains `?` **and** a hint word
-  (when/where/what/which/who/how/deadline/due/remind/missed). "anyone up for a trip Sunday?" is logged
-  as a plan, not answered.
+- Question routing: a message is answered if it contains `?` **and** a hint word
+  (when/where/what/which/who/how/deadline/due/remind/missed), or is a short question-word opener.
+  "anyone up for a trip Sunday?" is logged as a plan, not answered.
 
 ## Run
     cp .env.example .env   # fill DISCORD_BOT_TOKEN, OPENAI_API_KEY
     python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
-    python try_extract.py  # sanity check extraction
+    python scripts/try_extract.py  # sanity check extraction
     python bot.py
 
 ## Demo (4 min)
 1. Channel is pre-seeded via `!backfill`. Ask "what's due this week?"
 2. Instructor: "Quiz 3 moved to Thursday 9am." Bot reacts ✅. Ask again; answer changed, no duplicate,
    and the Events tab entry moved with it.
-3. Drop `course_outline.pdf`. Bot reacts ✅; several events appear in `!schedule` and in the Events tab.
+3. Drop `demo/course_outline.pdf`. Bot reacts ✅; several events appear in `!schedule` and in the Events tab.
 4. Student: "road trip Sunday, leaving 7am?" gets a ✅ too — and Mate posts a heads-up if it clashes.
-5. `!tick` posts a reminder nobody asked for.
+5. Student: "@Mate remind me 2 hours before assignment 1" → a DM later; "@Mate where are the slides?" →
+   a jump link; a logged plan also gets an RSVP poll; `!digest` shows the week.
+6. `!tick` posts a reminder nobody asked for.
