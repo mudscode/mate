@@ -6,7 +6,7 @@ from datetime import datetime
 import discord
 
 from . import db, discord_events, extract, hooks
-from .config import STAFF_ROLES
+from .config import STAFF_ROLES, TEST_BOT_IDS
 
 QUESTION_HINTS = ("when", "where", "what", "which", "who", "how", "deadline", "due", "remind", "missed", "miss")
 QUESTION_STARTERS = ("when", "where", "what", "whats", "what's", "who", "how", "is", "are", "does", "did", "any")
@@ -19,6 +19,8 @@ db_lock = asyncio.Lock()                 # upsert + Discord-event sync must not 
 def is_staff(member) -> bool:
     guild = getattr(member, "guild", None)
     if guild is not None and guild.owner_id == member.id:   # server owner counts as instructor (solo demo)
+        return True
+    if member.id in TEST_BOT_IDS:                           # the e2e tester posts as the instructor
         return True
     return any(r.name in STAFF_ROLES for r in getattr(member, "roles", []))
 

@@ -26,7 +26,10 @@ async def on_message(message: discord.Message):
     if message.author.bot and message.author.id not in config.TEST_BOT_IDS:
         return
     if message.content.startswith(bot.command_prefix):
-        await bot.process_commands(message)
+        if message.author.bot:                          # process_commands ignores bots; the e2e tester is allowed
+            await bot.invoke(await bot.get_context(message))
+        else:
+            await bot.process_commands(message)
         return
 
     replied_to_bot = (message.reference and isinstance(message.reference.resolved, discord.Message)
