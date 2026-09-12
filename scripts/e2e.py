@@ -144,9 +144,30 @@ class Run:
         row = sql("SELECT p.user_id FROM personal_reminders p JOIN events e ON e.id=p.event_id WHERE e.chat_id=? AND e.title LIKE ?", self.ch.id, f"%Quiz {TAG}%")
         check("reminder stored for the tester", bool(row) and row[0][0] == self.c.user.id, (r.content[:90] if r else ""))
 
-        print("8. commands")
+        print("8. Roman Urdu announcement -> ✅ on the right day")
+        m = await self.say(f"kal lab {TAG} hai 9 baje, Lab 2 mein, attendance zaroori hai")
+        check("✅ reaction", await self.reacted(m))
+        tomorrow = (datetime.now(config.TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
+        row = await poll_until(lambda: asyncio.sleep(0, result=sql("SELECT due_at FROM events WHERE chat_id=? AND status='active' AND title LIKE ?", self.ch.id, f"%{TAG}%lab%") or sql("SELECT due_at FROM events WHERE chat_id=? AND status='active' AND LOWER(title) LIKE ?", self.ch.id, f"%lab%{TAG}%")))
+        check("resolved 'kal 9 baje' to tomorrow 09:00", bool(row) and row[0][0] == f"{tomorrow}T09:00", row[0][0] if row else "no row")
+
+        print("9. talk to the memory: correct, then forget")
+        q = await self.ask(f"quiz {TAG} is actually on {weekday(5)} 11am")
+        r = await self.from_mate(q, reply_to=q)
+        target = (datetime.now(config.TZ) + timedelta(days=5)).strftime("%Y-%m-%dT11:00")
+        fixed = await poll_until(lambda: asyncio.sleep(0, result=(q_rows() or [(None,)])[0][0] == target), 20)
+        check("date corrected in the DB", bool(fixed), (r.content[:80] if r else ""))
+        q = await self.ask(f"forget quiz {TAG}")
+        r = await self.from_mate(q, reply_to=q)
+        gone = await poll_until(lambda: asyncio.sleep(0, result=not q_rows()), 20)
+        evs = await self.ch.guild.fetch_scheduled_events()
+        check("forgotten: no active row, no Events entry", bool(gone) and not any(f"Quiz {TAG}" in e.name for e in evs), (r.content[:80] if r else ""))
+
+        print("10. commands")
+        m = await self.say(f"!context This is the CS-{TAG} test course; the instructor is Dr. Test.")
+        check("!context stored", (await self.from_mate(m, want="I'll read this server as")) is not None)
         m = await self.say("!schedule 30")
-        check("!schedule lists the quiz", (await self.from_mate(m, want=f"quiz {TAG}")) is not None)
+        check("!schedule lists the lab", (await self.from_mate(m, want=f"lab {TAG}")) is not None)
         m = await self.say("!digest")
         check("!digest renders the week", (await self.from_mate(m, want="this week")) is not None)
         m = await self.say("!tick")
@@ -154,6 +175,8 @@ class Run:
 
     async def cleanup(self):
         n = 0
+        with sqlite3.connect(config.DB_PATH) as c:
+            c.execute("DELETE FROM settings WHERE guild_id=? AND key='context' AND value LIKE ?", (self.ch.guild.id, f"%CS-{TAG}%"))
         for e in await self.ch.guild.fetch_scheduled_events():
             if TAG in e.name and e.creator_id == MATE_ID:
                 await e.delete(); n += 1

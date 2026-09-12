@@ -30,7 +30,7 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - `mate/reminders.py`       24h/2h nudges posted back to the channel the item came from
 - `mate/discord_events.py`  mirrors dated events into the server's native Events tab; updates on reschedule
 - `mate/hooks.py`           `on_event_logged` / `on_message_ingested` / `on_tick`; errors are printed, not raised
-- `mate/features/`          `polls.py` `resources.py` `personal_reminders.py` `digest.py` — one file each
+- `mate/features/`          `polls` `resources` `personal_reminders` `digest` `context` `memory_edit` — one file each
 - `tests/`                  `fakes.py` (fake discord.py) + unit tests; `test_live.py` gated by `RUN_LIVE=1`
 - `scripts/`                `test.sh` `try_extract.py` `e2e.py` `reset.py`
 - `demo/`                   `seed_chat.txt` (paste as one message), `course_outline.pdf`
@@ -60,7 +60,7 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - Every dated event is mirrored as a native Discord scheduled event; the bot needs the **Manage Events**
   permission (invite permissions integer `283467942976`).
 - `notes` table holds free-form facts from "remember that ..."; `search_messages` searches notes too.
-- Q&A tools: `list_events` `search_messages` `recent_messages` `remember` (core) and `remind_me`
+- Q&A tools: `list_events` `search_messages` `recent_messages` `remember` `remind_me` `my_reminders` `plan_poll` `find_resources` `update_event` `forget_event` `group_context`
   `my_reminders` `plan_poll` `find_resources` (features). Adding one = one decorated function; the schema
   is built from the signature.
 - Features own their tables (`polls`, `resources`, `personal_reminders`, `digests`) and create them on demand.
@@ -71,6 +71,12 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - Question routing: a message is answered if it contains `?` **and** a hint word
   (when/where/what/which/who/how/deadline/due/remind/missed), or is a short question-word opener.
   "anyone up for a trip Sunday?" is logged as a plan, not answered.
+
+- Chat may be English, Urdu or Roman Urdu; the prompt maps kal/parso/jumma etc., and `extract._plausible`
+  checks the model's date against those words in Python. A deadline at 00:00 becomes 23:59 of the day before.
+- `!context <one sentence>` per server is injected into both prompts (settings table). Same code, any group.
+- Memory is editable by talking: `update_event` (Python-validated date) and `forget_event` (also removes the
+  Discord event). Both resolve "quiz 3" / "the trip" to the soonest matching upcoming event.
 
 ## Run
     cp .env.example .env   # fill DISCORD_BOT_TOKEN, OPENAI_API_KEY

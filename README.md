@@ -18,6 +18,10 @@ Mate is the memory of a class Discord server. People talk normally; it quietly r
   event clashes with something already on the same day.
 - Dedupes by the thing, not the date: "Quiz 3 moved to Thursday" updates the existing event in place.
 
+Also: understands Roman Urdu ("kal quiz hai 10 baje"), can be corrected by talking
+("@Mate quiz 3 is actually on Friday 9am", "@Mate forget the trip"), and reads one sentence of
+per-server context so the same bot fits a class, a team or a club.
+
 ## Setup (10 min)
 1. https://discord.com/developers/applications → New Application → Bot → Reset Token → copy.
    On the same Bot page, enable **Message Content Intent** (required; otherwise message text is empty).
@@ -34,6 +38,7 @@ Paste a real class chat into the channel (one message per line is fine), then `!
 ## Commands
 - `!backfill [n]` – extract events from the last n messages
 - `!schedule [days]` – dump upcoming events (fallback for Q&A)
+- `!context <one sentence about this group>` – e.g. `!context CS-321 Operating Systems, instructor Dr. Ahmed`
 - `!digest` – this week's events grouped by day (same text as the Sunday post)
 - `!tick` – run the reminder check now (demo)
 - Mention the bot, reply to it, or ask a question containing `?` and a hint word
