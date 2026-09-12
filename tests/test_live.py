@@ -3,6 +3,7 @@ import os
 import unittest
 from datetime import datetime
 
+from mate import config  # noqa: F401  (loads .env before we look at the key)
 from tests.fakes import fresh_db, run
 
 LIVE = os.getenv("RUN_LIVE") == "1" and os.getenv("OPENAI_API_KEY", "").startswith("sk-")

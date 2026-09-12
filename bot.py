@@ -5,7 +5,7 @@ import os
 import discord
 from discord.ext import commands, tasks
 
-from mate import config, db, features, handlers, qa, reminders
+from mate import config, db, features, handlers, hooks, qa, reminders
 from mate.handlers import EMOJI, fmt_when
 
 intents = discord.Intents.default()
@@ -63,12 +63,14 @@ async def schedule(ctx: commands.Context, days: int = 14):
 async def tick(ctx: commands.Context):
     """Force the reminder check right now (demo)."""
     n = await reminders.run(bot)
+    await hooks.fire(hooks.TICK, bot)
     await ctx.send(f"Reminder check done, sent {n}.")
 
 
 @tasks.loop(minutes=10)
 async def reminder_loop():
     await reminders.run(bot)
+    await hooks.fire(hooks.TICK, bot)
 
 
 features.setup_all(bot)
