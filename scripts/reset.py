@@ -1,17 +1,28 @@
 """Fresh start: delete the SQLite file and every Discord scheduled event this bot created.
-Run: python scripts/reset.py   (asks nothing; only touches the bot's own events)"""
+The per-server context sentences (!context) are kept. Run: python scripts/reset.py
+Then paste demo/seed_chat.txt into the class channel and drop demo/course_outline.pdf."""
 import os
+import sqlite3
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import discord
 
-from mate import config
+from mate import config, db
 
+kept = []
 if os.path.exists(config.DB_PATH):
+    try:
+        kept = sqlite3.connect(config.DB_PATH).execute("SELECT guild_id, key, value FROM settings").fetchall()
+    except sqlite3.OperationalError:
+        pass
     os.remove(config.DB_PATH)
     print(f"removed {config.DB_PATH}")
+db.init()
+for g, k, v in kept:
+    db.set_setting(g, k, v)
+print(f"kept {len(kept)} setting(s)")
 
 client = discord.Client(intents=discord.Intents.default())
 
