@@ -83,6 +83,14 @@ def get_event(event_id):
         return dict(r) if r else None
 
 
+def same_day_events(chat_id, due_at, exclude_id):
+    """Other active events in this chat on the same calendar day (for unprompted heads-ups)."""
+    with conn() as c:
+        return [dict(r) for r in c.execute(
+            "SELECT id,title,due_at FROM events WHERE chat_id=? AND status='active' AND id!=? AND substr(due_at,1,10)=?",
+            (chat_id, exclude_id, due_at[:10]))]
+
+
 def set_discord_event_id(event_id, discord_event_id):
     with conn() as c:
         c.execute("UPDATE events SET discord_event_id=? WHERE id=?", (discord_event_id, event_id))

@@ -52,16 +52,24 @@ async def ingest(message: discord.Message, react: bool = True) -> int:
     async with sem:
         events = await extract.extract(message.content, message.author.display_name, message.created_at,
                                        is_staff(message.author), atts, effort="medium" if atts else "low")
+    heads_up = None
     for e in events:
         status, eid = db.upsert_event(e, message.channel.id, message.id)
         deid = await discord_events.sync(message.guild, db.get_event(eid))
         if deid is not None:
             db.set_discord_event_id(eid, deid)
+        if status == "inserted" and e.due_at and heads_up is None:
+            clash = db.same_day_events(message.channel.id, e.due_at, eid)
+            if clash:
+                day = datetime.fromisoformat(e.due_at).strftime("%a %d %b")
+                heads_up = f"Heads up: **{e.title}** lands on the same day as **{clash[0]['title']}** ({day})."
     if events and react:
         try:
             await message.add_reaction("✅")
         except discord.HTTPException:
             pass
+        if heads_up:                          # the one time Mate speaks without being asked mid-chat
+            await message.channel.send(heads_up)
     return len(events)
 
 
