@@ -87,6 +87,12 @@ class FakeChannel:
         self.id, self.guild, self.name = cid, guild, name
         self.sent = []                                  # FakeMessage objects Mate posted here
         self.pinned = []
+        self.messages = {}                              # id -> FakeMessage, for fetch_message
+
+    async def fetch_message(self, mid):
+        if mid not in self.messages:
+            raise discord.NotFound(SimpleNamespace(status=404, reason="nf"), "Unknown message")
+        return self.messages[mid]
 
     async def send(self, content=None, **kw):
         m = FakeMessage(content or "", author=self.guild.me if self.guild else FakeUser("mate", bot=True),
@@ -126,7 +132,15 @@ class FakeMessage:
         self.replies = []
         self.pinned = False
         self.jump_url = f"https://discord.com/channels/{self.guild.id if self.guild else 0}/{channel.id if channel else 0}/{self.id}"
+        self.reactions_removed = []
         self.__dict__.update(extra)
+        if channel is not None:
+            channel.messages[self.id] = self
+
+    async def remove_reaction(self, emoji, member):
+        self.reactions_removed.append(str(emoji))
+        if str(emoji) in self.reactions_added:
+            self.reactions_added.remove(str(emoji))
 
     async def add_reaction(self, emoji):
         self.reactions_added.append(str(emoji))
@@ -156,6 +170,10 @@ class FakeBot:
             self.commands[fn.__name__] = fn
             return fn
         return deco
+
+    def add_listener(self, fn, name=None):
+        self.listeners = getattr(self, "listeners", {})
+        self.listeners.setdefault(name or fn.__name__, []).append(fn)
 
     def get_channel(self, cid):
         return self.channels.get(cid)
