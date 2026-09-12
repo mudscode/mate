@@ -73,7 +73,7 @@ class IngestTests(unittest.TestCase):
 
     def test_attachment_is_passed_to_extractor(self):
         seen = {}
-        async def spy(text, sender, sent_at, is_staff=False, attachments=(), effort="low"):
+        async def spy(text, sender, sent_at, is_staff=False, attachments=(), effort="low", **kw):
             seen.update(atts=list(attachments), effort=effort); return []
         extract.extract = spy
         m = FakeMessage("", self.sir, self.channel, attachments=[FakeAttachment(b"%PDF-1.4", "application/pdf")])

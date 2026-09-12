@@ -189,7 +189,7 @@ def fake_extract(events_by_text):
     """Return an async stand-in for extract.extract: text substring -> list[Event]."""
     from mate.extract import Event
 
-    async def _extract(text, sender, sent_at, is_staff=False, attachments=(), effort="low"):
+    async def _extract(text, sender, sent_at, is_staff=False, attachments=(), effort="low", **kw):
         for needle, evs in events_by_text.items():
             if needle in text:
                 return [Event(**e) if isinstance(e, dict) else e for e in evs]
