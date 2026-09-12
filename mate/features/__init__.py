@@ -1,7 +1,7 @@
 """One module per feature. Each exposes setup(bot) to register commands/loops; hooks and tools register on import."""
-from . import digest, personal_reminders, polls, resources
+from . import context, digest, memory_edit, personal_reminders, polls, resources
 
-ALL = [polls, resources, personal_reminders, digest]
+ALL = [polls, resources, personal_reminders, digest, context, memory_edit]
 
 
 def setup_all(bot):
