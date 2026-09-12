@@ -2,7 +2,8 @@
 plays student and instructor, and checks that the running Mate reacts, answers, dedupes, polls, links,
 reminds, and mirrors to the Events tab. Then it deletes everything it made (channel, DB rows, Discord events).
 
-One-time setup: Developer Portal -> New Application "mate-tester" -> Bot -> Reset Token. Invite it with
+One-time setup: Developer Portal -> New Application "mate-tester" -> Bot -> Reset Token, and enable
+Message Content Intent on that Bot page. Invite it with
 View Channels, Send Messages, Read Message History, Attach Files, Manage Messages, Manage Channels,
 Manage Events. Put MATE_TEST_BOT_TOKEN=<token> in .env. Restart bot.py once so it learns the tester's id.
 
@@ -190,7 +191,11 @@ async def main():
                 await run.cleanup()
             await client.close()
 
-    await client.start(token)
+    try:
+        await client.start(token)
+    except discord.PrivilegedIntentsRequired:
+        sys.exit("the tester bot needs Message Content Intent: Developer Portal -> mate-tester -> Bot -> "
+                 "Privileged Gateway Intents -> enable Message Content Intent -> Save, then rerun")
     passed, total = sum(results), len(results)
     print(f"\n{passed}/{total} checks passed" + ("" if passed == total else "   <-- FAILURES"))
     sys.exit(0 if passed == total else 1)
