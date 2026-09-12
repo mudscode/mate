@@ -65,7 +65,7 @@ async def ingest(message: discord.Message, react: bool = True) -> int:
             status, eid = db.upsert_event(e, guild_id, message.channel.id, message.id)
             logged.append((eid, status))
             if status == "inserted" and heads_up is None:
-                clash = db.same_day_events(guild_id, e.due_at, eid)
+                clash = db.same_day_events(guild_id, e.due_at, eid, message.id)
                 if clash:
                     day = datetime.fromisoformat(e.due_at).strftime("%a %d %b")
                     heads_up = f"Heads up: **{e.title}** lands on the same day as **{clash[0]['title']}** ({day})."

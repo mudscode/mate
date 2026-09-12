@@ -49,6 +49,13 @@ class IngestTests(unittest.TestCase):
         self.assertIn("Heads up", other.sent[0].content)
         self.assertIn("Quiz 2", other.sent[0].content)
 
+    def test_no_heads_up_for_a_clash_inside_one_message(self):
+        extract.extract = fake_extract({"outline": [QUIZ, dict(TRIP, due_at=NEXT_WEEK[:10] + "T18:00")]})
+        m = FakeMessage("course outline: quiz and study session same day", self.sir, self.channel)
+        run(handlers.ingest(m))
+        self.assertEqual(m.reactions_added, ["✅"])
+        self.assertEqual([x.content for x in self.channel.sent if "Heads up" in x.content], [])
+
     def test_backfill_mode_does_not_react_or_speak(self):
         run(handlers.ingest(FakeMessage("Quiz 2 will be on Wednesday 10am", self.sir, self.channel)))
         m = FakeMessage("road trip Wednesday 7am", self.ali, self.channel)
