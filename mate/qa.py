@@ -29,7 +29,8 @@ If nothing matches, say so and suggest asking the instructor.
 async def answer(question: str, asker: str, guild_id: int | None = None, chat_id: int | None = None,
                  asker_id: int | None = None, guild=None, context: str = "") -> str:
     now = datetime.now(TZ).strftime("%A %Y-%m-%d %H:%M")
-    ctx = {"asker": asker, "asker_id": asker_id, "guild_id": guild_id, "chat_id": chat_id, "guild": guild}
+    ctx = {"asker": asker, "asker_id": asker_id, "guild_id": guild_id, "chat_id": chat_id, "guild": guild,
+           "question": question}
     about = f"About this group: {context}" if context else ""
     kwargs = dict(model=MODEL, instructions=SYSTEM.format(now=now, context=about), tools=tools.TOOLS)
     resp = await client().responses.create(input=[{"role": "user", "content": f"{asker} asks: {question}"}], **kwargs)

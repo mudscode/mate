@@ -163,11 +163,23 @@ class Run:
         evs = await self.ch.guild.fetch_scheduled_events()
         check("forgotten: no active row, no Events entry", bool(gone) and not any(f"Quiz {TAG}" in e.name for e in evs), (r.content[:80] if r else ""))
 
-        print("10. commands")
+        print("10. one-click undo: ❌ on the Urdu lab message")
+        lab_rows = lambda: sql("SELECT status, discord_event_id FROM events WHERE chat_id=? AND status='active' AND LOWER(title) LIKE ?", self.ch.id, "%lab%")
+        await poll_until(lambda: asyncio.sleep(0, result=any(r[1] for r in lab_rows())), 90)   # wait for the mirror
+        await m.add_reaction("❌")
+        undone = await poll_until(lambda: asyncio.sleep(0, result=not lab_rows()), 30)
+        fresh = await self.ch.fetch_message(m.id)
+        emojis = [str(r.emoji) for r in fresh.reactions]
+        evs = await self.ch.guild.fetch_scheduled_events()
+        check("lab forgotten, ✅ swapped for 🗑️, Events entry gone",
+              bool(undone) and "🗑️" in emojis and not any(str(r.emoji) == "✅" and r.me is False and r.count > 0 for r in fresh.reactions if str(r.emoji) == "✅")
+              and not any("lab" in e.name.lower() and TAG in e.name for e in evs), f"reactions={emojis}")
+
+        print("11. commands")
         m = await self.say(f"!context This is the CS-{TAG} test course; the instructor is Dr. Test.")
         check("!context stored", (await self.from_mate(m, want="I'll read this server as")) is not None)
         m = await self.say("!schedule 30")
-        check("!schedule lists the lab", (await self.from_mate(m, want=f"lab {TAG}")) is not None)
+        check("!schedule lists the study session", (await self.from_mate(m, want="study session")) is not None)
         m = await self.say("!digest")
         check("!digest renders the week", (await self.from_mate(m, want="this week")) is not None)
         m = await self.say("!tick")

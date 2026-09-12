@@ -84,15 +84,20 @@ def _plausible(e: Event, anchor: datetime, text: str = "") -> bool:
     a = anchor.replace(tzinfo=None)
     if not (a - timedelta(hours=1) <= due <= a + timedelta(days=200)):   # nothing is announced after it happened
         return False
+    return day_words_match(text, due, a)
+
+
+def day_words_match(text: str, due: datetime, anchor: datetime) -> bool:
+    """If the text names one weekday, or says tomorrow/kal/parso, the date must agree. Python decides."""
     t = text.lower()
     named = [i for i, w in enumerate(WEEKDAYS) if re.search(rf"\b{w[:3]}[a-z]*\b", t)]
     named += [d for w, d in URDU_DAYS.items() if re.search(rf"\b{w}\b", t)]
     if len(set(named)) == 1 and due.weekday() != named[0]:
         return False
     if re.search(r"\b(tomorrow|kal)\b", t) and not re.search(r"\bparso\b", t) \
-            and due.date() != (a + timedelta(days=1)).date():
+            and due.date() != (anchor + timedelta(days=1)).date():
         return False
-    if re.search(r"\bparso\b", t) and due.date() != (a + timedelta(days=2)).date():
+    if re.search(r"\bparso\b", t) and due.date() != (anchor + timedelta(days=2)).date():
         return False
     return True
 

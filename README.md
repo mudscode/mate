@@ -22,6 +22,8 @@ Also: understands Roman Urdu ("kal quiz hai 10 baje"), can be corrected by talki
 ("@Mate quiz 3 is actually on Friday 9am", "@Mate forget the trip"), and reads one sentence of
 per-server context so the same bot fits a class, a team or a club.
 
+Made a mistake? React ❌ to a message Mate ✅'d and it forgets everything it logged from it.
+
 ## Setup (10 min)
 1. https://discord.com/developers/applications → New Application → Bot → Reset Token → copy.
    On the same Bot page, enable **Message Content Intent** (required; otherwise message text is empty).

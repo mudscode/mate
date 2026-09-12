@@ -30,7 +30,7 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - `mate/reminders.py`       24h/2h nudges posted back to the channel the item came from
 - `mate/discord_events.py`  mirrors dated events into the server's native Events tab; updates on reschedule
 - `mate/hooks.py`           `on_event_logged` / `on_message_ingested` / `on_tick`; errors are printed, not raised
-- `mate/features/`          `polls` `resources` `personal_reminders` `digest` `context` `memory_edit` — one file each
+- `mate/features/`          `polls` `resources` `personal_reminders` `digest` `context` `memory_edit` `undo` — one file each
 - `tests/`                  `fakes.py` (fake discord.py) + unit tests; `test_live.py` gated by `RUN_LIVE=1`
 - `scripts/`                `test.sh` `try_extract.py` `e2e.py` `reset.py`
 - `demo/`                   `seed_chat.txt` (paste as one message), `course_outline.pdf`
@@ -77,6 +77,9 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - `!context <one sentence>` per server is injected into both prompts (settings table). Same code, any group.
 - Memory is editable by talking: `update_event` (Python-validated date) and `forget_event` (also removes the
   Discord event). Both resolve "quiz 3" / "the trip" to the soonest matching upcoming event.
+
+- Undo: ❌ from the author or staff on a message Mate logged from supersedes its events, drops their
+  polls/personal reminders, deletes the Discord events, and swaps ✅ for 🗑️. No message posted.
 
 ## Run
     cp .env.example .env   # fill DISCORD_BOT_TOKEN, OPENAI_API_KEY

@@ -132,3 +132,21 @@ class MemoryEditTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DayWordTests(unittest.TestCase):
+    def test_update_rejects_a_date_on_the_wrong_weekday(self):
+        from datetime import datetime, timedelta
+        from types import SimpleNamespace
+        from mate import db
+        from mate.features import memory_edit
+        from tests.fakes import fresh_db, run
+        fresh_db()
+        due = (datetime.now() + timedelta(days=3)).strftime("%Y-%m-%dT10:00")
+        db.upsert_event(SimpleNamespace(key="quiz-9", title="Quiz 9", kind="quiz", due_at=due, details="", confidence=0.9), 1, 1, 1)
+        target = datetime.now() + timedelta(days=5)
+        wrong_day = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][(target.weekday() + 1) % 7]
+        ctx = {"guild_id": 1, "guild": None, "question": f"quiz 9 is actually on {wrong_day} 11am"}
+        out = run(memory_edit.update_event(ctx, "quiz 9", target.strftime("%Y-%m-%dT11:00"), ""))
+        self.assertIn("error", out)
+        self.assertEqual(db.get_event(1)["due_at"], due)

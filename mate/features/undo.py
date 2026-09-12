@@ -63,6 +63,7 @@ async def on_raw_reaction_add(payload):
             rows = c.execute("SELECT id, discord_event_id FROM events WHERE source_msg_id=? AND status='active'",
                              (payload.message_id,)).fetchall()
         if not rows:                                   # nothing was logged from this message: stay silent
+            print(f"undo: nothing active logged from message {payload.message_id}")
             return
 
         channel = _bot.get_channel(payload.channel_id) or await _bot.fetch_channel(payload.channel_id)
@@ -70,11 +71,14 @@ async def on_raw_reaction_add(payload):
         guild = getattr(channel, "guild", None) or _bot.get_guild(payload.guild_id)
         reactor = payload.member or (guild.get_member(payload.user_id) if guild else None)
         if reactor is None:
+            print(f"undo: can't resolve reactor {payload.user_id}")
             return
         if reactor.id != message.author.id and not handlers.is_staff(reactor):
+            print(f"undo: {reactor.display_name} may not undo {message.author.display_name}'s message")
             return                                     # only the person who said it, or staff, may undo it
 
-        await forget_message(guild, payload.message_id)
+        n = await forget_message(guild, payload.message_id)
+        print(f"undo: forgot {n} event(s) from message {payload.message_id} on ❌ by {reactor.display_name}")
         try:
             await message.remove_reaction("✅", _bot.user)
             await message.add_reaction("🗑️")           # the only acknowledgement; nothing is posted

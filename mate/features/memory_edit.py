@@ -22,6 +22,7 @@ import discord
 
 from .. import db, discord_events, tools
 from ..config import TZ
+from ..extract import WEEKDAYS, day_words_match
 
 MIN_LEAD = timedelta(minutes=5)      # Discord refuses scheduled events that start now-ish; so do we
 MAX_AHEAD = timedelta(days=365)      # a one-semester course; further out is the model mis-reading a year
@@ -79,6 +80,10 @@ async def update_event(ctx, what, new_due_at, new_title):
         new_due_at, why = _check_due_at(new_due_at)
         if why:
             return {"error": why}
+        due = datetime.fromisoformat(new_due_at)
+        if not day_words_match(ctx.get("question", ""), due, datetime.now(TZ).replace(tzinfo=None)):
+            return {"error": f"{new_due_at} is a {WEEKDAYS[due.weekday()].title()}, which does not match the day "
+                             "named in the request; recompute the date from today and try again"}
 
     obj = SimpleNamespace(key=row["key"], title=new_title or row["title"], kind=row["kind"],
                           due_at=new_due_at or row["due_at"], details=row["details"], confidence=1.0)
