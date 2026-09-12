@@ -3,6 +3,7 @@ One structured-output call. The model gets the message timestamp and weekday so 
 dates ('Friday', 'next week') resolve against the right anchor; Python then sanity-checks."""
 import base64
 import os
+import re
 from datetime import datetime, timedelta
 from typing import List, Literal, Optional
 from zoneinfo import ZoneInfo
@@ -46,7 +47,11 @@ For a course outline, syllabus, or schedule document, extract every dated item a
 Never invent dates. If a date is genuinely unspecified, set due_at to null."""
 
 
-def _plausible(e: Event, anchor: datetime) -> bool:
+WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+
+def _plausible(e: Event, anchor: datetime, text: str = "") -> bool:
+    """Python checks the model's date: window, and that it lands on the weekday / 'tomorrow' the text names."""
     if e.confidence < 0.5:
         return False
     if e.due_at is None:
@@ -56,7 +61,15 @@ def _plausible(e: Event, anchor: datetime) -> bool:
     except ValueError:
         return False
     a = anchor.replace(tzinfo=None)
-    return a - timedelta(days=2) <= due <= a + timedelta(days=200)
+    if not (a - timedelta(days=2) <= due <= a + timedelta(days=200)):
+        return False
+    t = text.lower()
+    named = [i for i, w in enumerate(WEEKDAYS) if re.search(rf"\b{w[:3]}[a-z]*\b", t)]
+    if len(named) == 1 and due.weekday() != named[0]:
+        return False
+    if "tomorrow" in t and due.date() != (a + timedelta(days=1)).date():
+        return False
+    return True
 
 
 async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = False,
@@ -84,4 +97,4 @@ async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = Fa
     )
     if resp.output_parsed is None:
         return []
-    return [e for e in resp.output_parsed.events if _plausible(e, local)]
+    return [e for e in resp.output_parsed.events if _plausible(e, local, text or '')]
