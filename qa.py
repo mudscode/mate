@@ -20,9 +20,9 @@ For 'what did I miss' questions, summarise the recent messages in a few bullet-f
 If nothing matches, say so and suggest asking the instructor."""
 
 
-async def answer(question: str, asker: str, chat_id: int | None = None) -> str:
+async def answer(question: str, asker: str, guild_id: int | None = None, chat_id: int | None = None) -> str:
     now = datetime.now(TZ).strftime("%A %Y-%m-%d %H:%M")
-    ctx = {"asker": asker, "chat_id": chat_id}
+    ctx = {"asker": asker, "guild_id": guild_id, "chat_id": chat_id}
     kwargs = dict(model=MODEL, instructions=SYSTEM.format(now=now), tools=tools.TOOLS)
     resp = await client.responses.create(input=[{"role": "user", "content": f"{asker} asks: {question}"}], **kwargs)
     for _ in range(6):  # tool-call rounds

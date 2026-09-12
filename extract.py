@@ -58,8 +58,8 @@ def _plausible(e: Event, anchor: datetime, text: str = "") -> bool:
     """Python checks the model's date: window, and that it lands on the weekday / 'tomorrow' the text names."""
     if e.confidence < 0.5:
         return False
-    if e.due_at is None:
-        return e.kind in ("announcement", "class_change")
+    if e.due_at is None:                      # undated facts live in the chat log, not the events table
+        return False
     try:
         due = datetime.fromisoformat(e.due_at)
     except ValueError:

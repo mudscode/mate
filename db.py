@@ -1,5 +1,6 @@
 """SQLite storage. All datetimes are ISO local strings 'YYYY-MM-DDTHH:MM' in Asia/Karachi,
-so plain string comparison orders them correctly."""
+so plain string comparison orders them. Memory is scoped per server (guild_id); chat_id is the
+channel an item came from, used for posting reminders back where it belongs."""
 import sqlite3, difflib
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -22,58 +23,61 @@ def init():
     with conn() as c:
         c.executescript("""
         CREATE TABLE IF NOT EXISTS messages(
-            id INTEGER PRIMARY KEY, chat_id INTEGER, msg_id INTEGER UNIQUE,
+            id INTEGER PRIMARY KEY, guild_id INTEGER, chat_id INTEGER, msg_id INTEGER UNIQUE,
             sender TEXT, text TEXT, ts TEXT, has_file INTEGER DEFAULT 0);
         CREATE TABLE IF NOT EXISTS events(
-            id INTEGER PRIMARY KEY, chat_id INTEGER, title TEXT, kind TEXT,
+            id INTEGER PRIMARY KEY, guild_id INTEGER, chat_id INTEGER, title TEXT, kind TEXT,
             due_at TEXT, details TEXT, source_msg_id INTEGER, confidence REAL,
-            created_at TEXT, status TEXT DEFAULT 'active', key TEXT,
-            discord_event_id INTEGER);
+            created_at TEXT, status TEXT DEFAULT 'active', key TEXT, discord_event_id INTEGER);
         CREATE TABLE IF NOT EXISTS notes(
-            id INTEGER PRIMARY KEY, chat_id INTEGER, author TEXT, note TEXT, created_at TEXT);
+            id INTEGER PRIMARY KEY, guild_id INTEGER, chat_id INTEGER, author TEXT, note TEXT, created_at TEXT);
         CREATE TABLE IF NOT EXISTS reminders(
             id INTEGER PRIMARY KEY, event_id INTEGER, kind TEXT, sent_at TEXT,
             UNIQUE(event_id, kind));
         """)
-        try:                                  # older DBs predate the Discord mirror
-            c.execute("ALTER TABLE events ADD COLUMN discord_event_id INTEGER")
-        except sqlite3.OperationalError:
-            pass
+        for table, col in (("events", "discord_event_id INTEGER"), ("events", "guild_id INTEGER"),
+                           ("messages", "guild_id INTEGER"), ("notes", "guild_id INTEGER")):
+            try:                                  # older DBs predate these columns
+                c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
+            except sqlite3.OperationalError:
+                pass
 
 
-def add_message(chat_id, msg_id, sender, text, ts, has_file=False):
+def add_message(guild_id, chat_id, msg_id, sender, text, ts, has_file=False):
     with conn() as c:
-        c.execute("INSERT OR IGNORE INTO messages(chat_id,msg_id,sender,text,ts,has_file) VALUES(?,?,?,?,?,?)",
-                  (chat_id, msg_id, sender, text, ts, int(has_file)))
+        c.execute("INSERT OR IGNORE INTO messages(guild_id,chat_id,msg_id,sender,text,ts,has_file) VALUES(?,?,?,?,?,?,?)",
+                  (guild_id, chat_id, msg_id, sender, text, ts, int(has_file)))
 
 
 def _similar(a, b):
     return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
-def upsert_event(ev, chat_id, source_msg_id) -> tuple[str, int]:
+def upsert_event(ev, guild_id, chat_id, source_msg_id) -> tuple[str, int]:
     """Insert, or update the existing active event with the same key (reschedules, corrections).
-    Falls back to a near-identical title on the same day. Returns ('inserted' | 'updated', events.id)."""
+    Falls back to same kind + same minute, or same kind + near-identical title on the same day.
+    Returns ('inserted' | 'updated', events.id)."""
     with conn() as c:
-        rows = c.execute("SELECT * FROM events WHERE chat_id=? AND kind=? AND status='active'",
-                         (chat_id, ev.kind)).fetchall()
+        rows = c.execute("SELECT * FROM events WHERE guild_id=? AND status='active'", (guild_id,)).fetchall()
         match = next((r for r in rows if r["key"] == ev.key), None)
         if match is None:
             for r in rows:
-                same_day = ev.due_at and r["due_at"] and abs(
-                    (datetime.fromisoformat(ev.due_at) - datetime.fromisoformat(r["due_at"])).days) <= 1
-                same_minute = ev.due_at and r["due_at"] == ev.due_at
-                if same_minute or (same_day and _similar(ev.title, r["title"]) > 0.85):
+                if r["kind"] != ev.kind or not (ev.due_at and r["due_at"]):
+                    continue
+                same_day = abs((datetime.fromisoformat(ev.due_at) - datetime.fromisoformat(r["due_at"])).days) <= 1
+                if r["due_at"] == ev.due_at or (same_day and _similar(ev.title, r["title"]) > 0.85):
                     match = r
                     break
         if match:
-            c.execute("UPDATE events SET key=?, title=?, due_at=?, details=?, source_msg_id=?, confidence=? WHERE id=?",
-                      (ev.key, ev.title, ev.due_at, ev.details, source_msg_id, ev.confidence, match["id"]))
+            c.execute("UPDATE events SET key=?, kind=?, title=?, due_at=?, details=?, source_msg_id=?, confidence=? WHERE id=?",
+                      (ev.key, ev.kind, ev.title, ev.due_at, ev.details, source_msg_id, ev.confidence, match["id"]))
             if match["due_at"] != ev.due_at:
                 c.execute("DELETE FROM reminders WHERE event_id=?", (match["id"],))
             return "updated", match["id"]
-        cur = c.execute("INSERT INTO events(chat_id,key,title,kind,due_at,details,source_msg_id,confidence,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                        (chat_id, ev.key, ev.title, ev.kind, ev.due_at, ev.details, source_msg_id, ev.confidence, now_local()))
+        cur = c.execute("INSERT INTO events(guild_id,chat_id,key,title,kind,due_at,details,source_msg_id,confidence,created_at) "
+                        "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                        (guild_id, chat_id, ev.key, ev.title, ev.kind, ev.due_at, ev.details, source_msg_id,
+                         ev.confidence, now_local()))
         return "inserted", cur.lastrowid
 
 
@@ -83,57 +87,56 @@ def get_event(event_id):
         return dict(r) if r else None
 
 
-def same_day_events(chat_id, due_at, exclude_id):
-    """Other active events in this chat on the same calendar day (for unprompted heads-ups)."""
-    with conn() as c:
-        return [dict(r) for r in c.execute(
-            "SELECT id,title,due_at FROM events WHERE chat_id=? AND status='active' AND id!=? AND substr(due_at,1,10)=?",
-            (chat_id, exclude_id, due_at[:10]))]
-
-
 def set_discord_event_id(event_id, discord_event_id):
     with conn() as c:
         c.execute("UPDATE events SET discord_event_id=? WHERE id=?", (discord_event_id, event_id))
 
 
-def list_events(days_ahead=14, chat_id=None):
-    now = now_local()
-    until = (datetime.now(TZ) + timedelta(days=days_ahead)).strftime("%Y-%m-%dT%H:%M")
-    week_ago = (datetime.now(TZ) - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M")
-    q = """SELECT id,title,kind,due_at,details,confidence FROM events WHERE status='active'
-           AND ((due_at BETWEEN ? AND ?) OR (due_at IS NULL AND created_at >= ?))"""
-    args = [now, until, week_ago]
-    if chat_id:
-        q += " AND chat_id=?"; args.append(chat_id)
-    q += " ORDER BY due_at IS NULL, due_at"
-    with conn() as c:
-        return [dict(r) for r in c.execute(q, args)]
-
-
-def search_messages(query, limit=20):
+def same_day_events(guild_id, due_at, exclude_id):
+    """Other active events in this server on the same calendar day (for unprompted heads-ups)."""
     with conn() as c:
         return [dict(r) for r in c.execute(
-            "SELECT sender,text,ts FROM messages WHERE text LIKE ? ORDER BY ts DESC LIMIT ?",
-            (f"%{query}%", limit))]
+            "SELECT id,title,due_at FROM events WHERE guild_id=? AND status='active' AND id!=? AND substr(due_at,1,10)=?",
+            (guild_id, exclude_id, due_at[:10]))]
 
 
-def recent_messages(since, chat_id=None, limit=80):
+def list_events(days_ahead=14, guild_id=None):
+    now = now_local()
+    until = (datetime.now(TZ) + timedelta(days=days_ahead)).strftime("%Y-%m-%dT%H:%M")
+    q = "SELECT id,title,kind,due_at,details,confidence FROM events WHERE status='active' AND due_at BETWEEN ? AND ?"
+    args = [now, until]
+    if guild_id:
+        q += " AND guild_id=?"; args.append(guild_id)
+    with conn() as c:
+        return [dict(r) for r in c.execute(q + " ORDER BY due_at", args)]
+
+
+def search_messages(query, guild_id=None, limit=20):
+    q, args = "SELECT sender,text,ts FROM messages WHERE text LIKE ?", [f"%{query}%"]
+    if guild_id:
+        q += " AND guild_id=?"; args.append(guild_id)
+    with conn() as c:
+        return [dict(r) for r in c.execute(q + " ORDER BY ts DESC LIMIT ?", args + [limit])]
+
+
+def recent_messages(since, guild_id=None, limit=80):
     q, args = "SELECT sender,text,ts FROM messages WHERE ts >= ? AND text != ''", [since]
-    if chat_id:
-        q += " AND chat_id=?"; args.append(chat_id)
+    if guild_id:
+        q += " AND guild_id=?"; args.append(guild_id)
     with conn() as c:
         return [dict(r) for r in c.execute(q + " ORDER BY ts LIMIT ?", args + [limit])]
 
 
-def add_note(chat_id, author, note):
+def add_note(guild_id, chat_id, author, note):
     with conn() as c:
-        c.execute("INSERT INTO notes(chat_id,author,note,created_at) VALUES(?,?,?,?)", (chat_id, author, note, now_local()))
+        c.execute("INSERT INTO notes(guild_id,chat_id,author,note,created_at) VALUES(?,?,?,?,?)",
+                  (guild_id, chat_id, author, note, now_local()))
 
 
-def search_notes(query, chat_id=None, limit=10):
+def search_notes(query, guild_id=None, limit=10):
     q, args = "SELECT author,note,created_at FROM notes WHERE note LIKE ?", [f"%{query}%"]
-    if chat_id:
-        q += " AND chat_id=?"; args.append(chat_id)
+    if guild_id:
+        q += " AND guild_id=?"; args.append(guild_id)
     with conn() as c:
         return [dict(r) for r in c.execute(q + " ORDER BY created_at DESC LIMIT ?", args + [limit])]
 
