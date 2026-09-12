@@ -1,0 +1,5 @@
+.env
+.venv/
+mate.db
+__pycache__/
+CLAUDE.md

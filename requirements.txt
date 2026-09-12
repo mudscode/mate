@@ -1,0 +1,4 @@
+discord.py>=2.4
+openai>=1.70
+pydantic>=2
+python-dotenv

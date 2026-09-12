@@ -1,0 +1,25 @@
+"""Sanity-check extraction without Discord: python try_extract.py  (needs OPENAI_API_KEY in .env)"""
+import asyncio
+from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
+import extract
+
+SAMPLES = [
+    ("Sir", True,  "Quiz 3 will be on Monday 10am, chapters 5 and 6. Same room."),
+    ("Ali", False, "anyone got the slides from today"),
+    ("TA",  True,  "Assignment 2 deadline extended to Friday midnight, submit on LMS"),
+    ("Sara",False, "i think quiz might be next week? not sure"),
+    ("Sir", True,  "Tomorrow's lecture is in Room 204 instead of the lab"),
+]
+
+async def main():
+    for sender, staff, text in SAMPLES:
+        evs = await extract.extract(text, sender, datetime.now(extract.TZ), staff)
+        print(f"\n> {text}")
+        for e in evs:
+            print(f"   {e.kind:13} {e.key:14} {e.due_at}  {e.title}  (conf {e.confidence})")
+        if not evs:
+            print("   (no event)")
+
+asyncio.run(main())
