@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()                            # must run before importing extract/qa: they build the OpenAI client at import
 
 import db
+import discord_events
 import extract
 import qa
 
@@ -52,7 +53,10 @@ async def ingest(message: discord.Message, react: bool = True) -> int:
         events = await extract.extract(message.content, message.author.display_name, message.created_at,
                                        is_staff(message.author), atts, effort="medium" if atts else "low")
     for e in events:
-        db.upsert_event(e, message.channel.id, message.id)
+        status, eid = db.upsert_event(e, message.channel.id, message.id)
+        deid = await discord_events.sync(message.guild, db.get_event(eid))
+        if deid is not None:
+            db.set_discord_event_id(eid, deid)
     if events and react:
         try:
             await message.add_reaction("✅")

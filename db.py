@@ -27,13 +27,18 @@ def init():
         CREATE TABLE IF NOT EXISTS events(
             id INTEGER PRIMARY KEY, chat_id INTEGER, title TEXT, kind TEXT,
             due_at TEXT, details TEXT, source_msg_id INTEGER, confidence REAL,
-            created_at TEXT, status TEXT DEFAULT 'active', key TEXT);
+            created_at TEXT, status TEXT DEFAULT 'active', key TEXT,
+            discord_event_id INTEGER);
         CREATE TABLE IF NOT EXISTS notes(
             id INTEGER PRIMARY KEY, chat_id INTEGER, author TEXT, note TEXT, created_at TEXT);
         CREATE TABLE IF NOT EXISTS reminders(
             id INTEGER PRIMARY KEY, event_id INTEGER, kind TEXT, sent_at TEXT,
             UNIQUE(event_id, kind));
         """)
+        try:                                  # older DBs predate the Discord mirror
+            c.execute("ALTER TABLE events ADD COLUMN discord_event_id INTEGER")
+        except sqlite3.OperationalError:
+            pass
 
 
 def add_message(chat_id, msg_id, sender, text, ts, has_file=False):
@@ -46,9 +51,9 @@ def _similar(a, b):
     return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
-def upsert_event(ev, chat_id, source_msg_id) -> str:
+def upsert_event(ev, chat_id, source_msg_id) -> tuple[str, int]:
     """Insert, or update the existing active event with the same key (reschedules, corrections).
-    Falls back to a near-identical title on the same day. Returns 'inserted' | 'updated'."""
+    Falls back to a near-identical title on the same day. Returns ('inserted' | 'updated', events.id)."""
     with conn() as c:
         rows = c.execute("SELECT * FROM events WHERE chat_id=? AND kind=? AND status='active'",
                          (chat_id, ev.kind)).fetchall()
@@ -66,10 +71,21 @@ def upsert_event(ev, chat_id, source_msg_id) -> str:
                       (ev.key, ev.title, ev.due_at, ev.details, source_msg_id, ev.confidence, match["id"]))
             if match["due_at"] != ev.due_at:
                 c.execute("DELETE FROM reminders WHERE event_id=?", (match["id"],))
-            return "updated"
-        c.execute("INSERT INTO events(chat_id,key,title,kind,due_at,details,source_msg_id,confidence,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                  (chat_id, ev.key, ev.title, ev.kind, ev.due_at, ev.details, source_msg_id, ev.confidence, now_local()))
-        return "inserted"
+            return "updated", match["id"]
+        cur = c.execute("INSERT INTO events(chat_id,key,title,kind,due_at,details,source_msg_id,confidence,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                        (chat_id, ev.key, ev.title, ev.kind, ev.due_at, ev.details, source_msg_id, ev.confidence, now_local()))
+        return "inserted", cur.lastrowid
+
+
+def get_event(event_id):
+    with conn() as c:
+        r = c.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+        return dict(r) if r else None
+
+
+def set_discord_event_id(event_id, discord_event_id):
+    with conn() as c:
+        c.execute("UPDATE events SET discord_event_id=? WHERE id=?", (discord_event_id, event_id))
 
 
 def list_events(days_ahead=14, chat_id=None):
