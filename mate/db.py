@@ -111,8 +111,8 @@ def same_day_events(guild_id, due_at, exclude_id, exclude_msg_id=None):
     with conn() as c:
         return [dict(r) for r in c.execute(
             "SELECT id,title,due_at FROM events WHERE guild_id=? AND status='active' AND id!=? AND substr(due_at,1,10)=? "
-            "AND (source_msg_id IS NULL OR source_msg_id != ?)",
-            (guild_id, exclude_id, due_at[:10], exclude_msg_id))]
+            "AND (? IS NULL OR source_msg_id IS NULL OR source_msg_id != ?)",
+            (guild_id, exclude_id, due_at[:10], exclude_msg_id, exclude_msg_id))]
 
 
 def list_events(days_ahead=14, guild_id=None):
