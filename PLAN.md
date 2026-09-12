@@ -114,3 +114,14 @@ Telegram login was a blocker. Discord is easier and the plan is otherwise unchan
 - Nudges go to the class channel (bot can DM server members, but keep it in-channel for the demo).
 - WhatsApp ruled out: official Cloud API has no group support; unofficial libs risk bans.
   Slack works (Socket Mode) but is a weaker student story.
+
+## Afternoon additions (12 Sep, after the core demo passed at 12:50)
+- `extract.py`: new event kind `plan` (trips, study sessions, meetups); the prompt now frames Mate as the memory of a class group chat, not just course admin.
+- `tools.py`: a `@tool` decorator registry — adding a Q&A tool is one decorated function. Tools: `list_events`, `search_messages` (notes too), `recent_messages` ("what did I miss?"), `remember` ("remember that the TA's email is ..." → notes table).
+- `qa.py`: runs off `tools.TOOLS` / `tools.dispatch`, and Q&A is scoped to the asking channel.
+- `discord_events.py`: every dated event is mirrored as a native Discord scheduled event in the server's Events tab and updated on reschedule — needs **Manage Events**, so the OAuth2 invite permissions integer is now `283467942976`.
+- Heads-ups: when a newly logged event lands on the same day as an existing one, Mate posts one unprompted line pointing out the clash.
+- Question routing: a message is treated as a question only if it has `?` **and** a hint word (when/where/what/which/who/how/deadline/due/remind/missed), so "anyone up for a trip Sunday?" is logged as a plan, not answered.
+- Demo assets committed: `seed_chat.txt` (paste as one message) and `course_outline.pdf`.
+
+Revised cut line: Behind at 15:30 → drop Discord Events mirror and heads-ups; the core demo already works.
