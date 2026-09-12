@@ -1,11 +1,10 @@
 """Mirror logged events into the server's native Discord "Events" tab. Best effort: never raises."""
 import re
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 
 import discord
 
-TZ = ZoneInfo("Asia/Karachi")
+from .config import TZ
 PLACE = re.compile(r"(Room|Lab|Hall|Auditorium|Library)[^,.;]*", re.I)
 _warned = False                              # print the missing-permission line once per process
 

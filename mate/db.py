@@ -2,21 +2,28 @@
 so plain string comparison orders them. Memory is scoped per server (guild_id); chat_id is the
 channel an item came from, used for posting reminders back where it belongs."""
 import sqlite3, difflib
+from contextlib import contextmanager
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 
-DB = "mate.db"
-TZ = ZoneInfo("Asia/Karachi")
+from .config import DB_PATH, TZ
+
+DB = DB_PATH          # tests reassign this before init()
 
 
 def now_local() -> str:
     return datetime.now(TZ).strftime("%Y-%m-%dT%H:%M")
 
 
+@contextmanager
 def conn():
+    """with conn() as c: ...   commits on success, always closes."""
     c = sqlite3.connect(DB)
     c.row_factory = sqlite3.Row
-    return c
+    try:
+        with c:
+            yield c
+    finally:
+        c.close()
 
 
 def init():

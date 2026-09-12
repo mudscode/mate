@@ -1,9 +1,11 @@
-"""Sanity-check extraction without Discord: python try_extract.py  (needs OPENAI_API_KEY in .env)"""
+"""Sanity-check extraction without Discord: python scripts/try_extract.py  (needs OPENAI_API_KEY in .env)"""
 import asyncio
+import sys
 from datetime import datetime
-from dotenv import load_dotenv
-load_dotenv()
-import extract
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from mate import extract
 
 SAMPLES = [
     ("Sir", True,  "Quiz 3 will be on Monday 10am, chapters 5 and 6. Same room."),

@@ -1,9 +1,9 @@
 """Tools the Q&A model can call. Adding one = one decorated function; the schema is built from the signature.
-Handlers get a ctx dict (asker, guild_id, chat_id) first, then the model's arguments."""
+Handlers get a ctx dict (asker, asker_id, guild_id, chat_id) first, then the model's arguments."""
 import json
 from datetime import datetime, timedelta
 
-import db
+from . import db
 
 TOOLS = []       # Responses API function schemas
 HANDLERS = {}    # name -> python callable

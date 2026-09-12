@@ -2,18 +2,23 @@
 One structured-output call. The model gets the message timestamp and weekday so relative
 dates ('Friday', 'next week') resolve against the right anchor; Python then sanity-checks."""
 import base64
-import os
 import re
 from datetime import datetime, timedelta
 from typing import List, Literal, Optional
-from zoneinfo import ZoneInfo
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
-TZ = ZoneInfo("Asia/Karachi")
-client = AsyncOpenAI()
-MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
+from .config import MODEL, TZ
+
+_client = None
+
+
+def client() -> AsyncOpenAI:
+    global _client                # lazy so importing the package never needs a key (tests)
+    if _client is None:
+        _client = AsyncOpenAI()
+    return _client
 
 
 class Event(BaseModel):
@@ -92,7 +97,7 @@ async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = Fa
     content.append({"type": "input_text", "text":
         f"Message sent {local.strftime('%A %Y-%m-%d %H:%M')} (Asia/Karachi) by {who}:\n\n{text or '(no text; see attachment)'}"})
 
-    resp = await client.responses.parse(
+    resp = await client().responses.parse(
         model=MODEL,
         instructions=SYSTEM,
         reasoning={"effort": effort},
