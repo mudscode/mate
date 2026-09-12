@@ -44,3 +44,12 @@ class UrduDateCheckTests(unittest.TestCase):
         self.assertEqual(e.due_at, "2026-09-18T23:59")
         past = self._ev("2026-09-12T00:00"); past.kind = "deadline"
         self.assertFalse(_plausible(past, sat, "assignment jumma raat 12 baje tak"))
+
+    def test_announcement_dated_now_is_not_an_event(self):
+        from datetime import datetime
+        from mate.extract import TZ, _plausible
+        now = datetime(2026, 9, 12, 15, 42, tzinfo=TZ)
+        e = self._ev("2026-09-12T15:42"); e.kind = "announcement"
+        self.assertFalse(_plausible(e, now, "Slides for lecture 4 are on LMS now."))
+        e2 = self._ev("2026-09-14T10:00"); e2.kind = "announcement"
+        self.assertTrue(_plausible(e2, now, "Guest lecture on Monday 10am"))

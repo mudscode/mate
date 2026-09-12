@@ -84,6 +84,8 @@ def _plausible(e: Event, anchor: datetime, text: str = "") -> bool:
     a = anchor.replace(tzinfo=None)
     if not (a - timedelta(hours=1) <= due <= a + timedelta(days=200)):   # nothing is announced after it happened
         return False
+    if e.kind == "announcement" and abs(due - a) <= timedelta(minutes=10):   # "slides are up": news, not an event
+        return False
     return day_words_match(text, due, a)
 
 
