@@ -55,7 +55,8 @@ def upsert_event(ev, chat_id, source_msg_id) -> str:
             for r in rows:
                 same_day = ev.due_at and r["due_at"] and abs(
                     (datetime.fromisoformat(ev.due_at) - datetime.fromisoformat(r["due_at"])).days) <= 1
-                if same_day and _similar(ev.title, r["title"]) > 0.85:
+                same_minute = ev.due_at and r["due_at"] == ev.due_at
+                if same_minute or (same_day and _similar(ev.title, r["title"]) > 0.85):
                     match = r
                     break
         if match:

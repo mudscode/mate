@@ -18,7 +18,7 @@ MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 
 class Event(BaseModel):
     key: str = Field(description="Stable slug for the THING, not its date: 'quiz-3', 'assignment-2', 'midterm', "
-                                 "'lecture-room-change'. A reschedule or correction of the same item MUST reuse the same key.")
+                                 "'lecture-room-change'. Never put a date in the key. A reschedule or correction of the same item MUST reuse the same key.")
     title: str = Field(description="Short, e.g. 'Quiz 3 (Ch. 5)', 'Assignment 2 due', 'Lecture moved to Room 204'")
     kind: Literal["deadline", "quiz", "exam", "class_change", "announcement"]
     due_at: Optional[str] = Field(
