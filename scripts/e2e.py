@@ -163,6 +163,7 @@ class Run:
         evs = await self.ch.guild.fetch_scheduled_events()
         check("forgotten: no active row, no Events entry", bool(gone) and not any(f"Quiz {TAG}" in e.name for e in evs), (r.content[:80] if r else ""))
 
+        self.prev_context = sql("SELECT value FROM settings WHERE guild_id=? AND key='context'", self.ch.guild.id)
         print("10. one-click undo: ❌ on the Urdu lab message")
         lab_rows = lambda: sql("SELECT status, discord_event_id FROM events WHERE chat_id=? AND status='active' AND LOWER(title) LIKE ?", self.ch.id, "%lab%")
         await poll_until(lambda: asyncio.sleep(0, result=any(r[1] for r in lab_rows())), 90)   # wait for the mirror
@@ -190,8 +191,12 @@ class Run:
 
     async def cleanup(self):
         n = 0
-        with sqlite3.connect(config.DB_PATH) as c:
-            c.execute("DELETE FROM settings WHERE guild_id=? AND key='context' AND value LIKE ?", (self.ch.guild.id, f"%CS-{TAG}%"))
+        with sqlite3.connect(config.DB_PATH) as c:                     # put the server's own context back
+            prev = getattr(self, "prev_context", None)
+            if prev:
+                c.execute("INSERT OR REPLACE INTO settings(guild_id,key,value) VALUES(?,?,?)", (self.ch.guild.id, "context", prev[0][0]))
+            else:
+                c.execute("DELETE FROM settings WHERE guild_id=? AND key='context' AND value LIKE ?", (self.ch.guild.id, f"%CS-{TAG}%"))
         for e in await self.ch.guild.fetch_scheduled_events():
             if TAG in e.name and e.creator_id == MATE_ID:
                 await e.delete(); n += 1
