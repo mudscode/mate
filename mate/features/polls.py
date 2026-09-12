@@ -47,10 +47,10 @@ async def on_plan(message, ev, status):
                   (ev["id"], ev["guild_id"], ev["chat_id"], getattr(sent, "id", None), db.now_local()))
 
 
-@tools.tool("Find the RSVP poll Mate posted for a student plan (trip, study session, meetup). "
-            "Use for 'did anyone RSVP to the trip?' or 'where's the poll for the study session?'.",
+@tools.tool("The RSVP poll Mate posted for a student plan (trip, study session, meetup), with live vote counts "
+            "and who voted. Use for 'who's coming to the trip?', 'how many are in for the study session?'.",
             query=("string", "A word or two from the plan's title, e.g. 'trip' or 'study session'."))
-def plan_poll(ctx, query):
+async def plan_poll(ctx, query):
     _ensure()
     with db.conn() as c:
         r = c.execute("""SELECT e.title, e.due_at, e.chat_id, p.poll_message_id
@@ -60,8 +60,18 @@ def plan_poll(ctx, query):
                       (ctx.get("guild_id"), f"%{query}%")).fetchone()
     if r is None:
         return {"error": "no such plan"}
-    return {"title": r["title"], "due_at": r["due_at"],
-            "poll_message_id": r["poll_message_id"], "chat_id": r["chat_id"]}
+    out = {"title": r["title"], "due_at": r["due_at"], "poll_message_id": r["poll_message_id"], "chat_id": r["chat_id"]}
+    guild = ctx.get("guild")
+    if guild is not None and r["poll_message_id"]:          # live counts straight from Discord
+        try:
+            ch = guild.get_channel(r["chat_id"]) or await guild.fetch_channel(r["chat_id"])
+            poll = (await ch.fetch_message(r["poll_message_id"])).poll
+            out["answers"] = [{"text": a.text, "votes": a.vote_count,
+                               "voters": [u.display_name async for u in a.voters()]} for a in poll.answers]
+            out["total_votes"] = poll.total_votes
+        except discord.HTTPException as e:
+            out["error"] = f"poll unreadable: {e}"
+    return out
 
 
 def setup(bot):
