@@ -101,7 +101,8 @@ async def schedule(ctx: commands.Context, days: int = 14):
     evs = db.list_events(days, chat_id=ctx.channel.id)
     if not evs:
         return await ctx.send("Nothing upcoming.")
-    lines = [f"{EMOJI.get(e['kind'], '•')} **{e['title']}** — {e['due_at'] or 'no date'}" for e in evs]
+    lines = [f"{EMOJI.get(e['kind'], '•')} **{e['title']}** — "
+             f"{datetime.fromisoformat(e['due_at']).strftime('%a %d %b, %H:%M') if e['due_at'] else 'no date'}" for e in evs]
     await ctx.send("\n".join(lines))
 
 
