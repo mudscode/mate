@@ -168,12 +168,15 @@ class Run:
         await poll_until(lambda: asyncio.sleep(0, result=any(r[1] for r in lab_rows())), 90)   # wait for the mirror
         await m.add_reaction("❌")
         undone = await poll_until(lambda: asyncio.sleep(0, result=not lab_rows()), 30)
-        fresh = await self.ch.fetch_message(m.id)
-        emojis = [str(r.emoji) for r in fresh.reactions]
+
+        async def swapped():
+            emojis = [str(r.emoji) for r in (await self.ch.fetch_message(m.id)).reactions]
+            return emojis if "🗑️" in emojis and "✅" not in emojis else None
+        emojis = await poll_until(swapped, 30)
         evs = await self.ch.guild.fetch_scheduled_events()
         check("lab forgotten, ✅ swapped for 🗑️, Events entry gone",
-              bool(undone) and "🗑️" in emojis and not any(str(r.emoji) == "✅" and r.me is False and r.count > 0 for r in fresh.reactions if str(r.emoji) == "✅")
-              and not any("lab" in e.name.lower() and TAG in e.name for e in evs), f"reactions={emojis}")
+              bool(undone) and bool(emojis) and not any("lab" in e.name.lower() and TAG in e.name for e in evs),
+              f"reactions={emojis}")
 
         print("11. commands")
         m = await self.say(f"!context This is the CS-{TAG} test course; the instructor is Dr. Test.")
