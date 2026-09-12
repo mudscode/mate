@@ -1,5 +1,7 @@
 """Tools the Q&A model can call. Adding one = one decorated function; the schema is built from the signature.
-Handlers get a ctx dict (asker, asker_id, guild_id, chat_id) first, then the model's arguments."""
+Handlers get a ctx dict (asker, asker_id, guild_id, chat_id, guild) first, then the model's arguments.
+`guild` is the live discord.Guild (None in offline tests); handlers may be async."""
+import inspect
 import json
 from datetime import datetime, timedelta
 
@@ -22,11 +24,14 @@ def tool(description: str, **params):
     return deco
 
 
-def dispatch(name: str, args: dict, ctx: dict) -> str:
+async def dispatch(name: str, args: dict, ctx: dict) -> str:
     fn = HANDLERS.get(name)
     if fn is None:
         return json.dumps({"error": f"unknown tool {name}"})
-    return json.dumps(fn(ctx, **args), default=str)
+    out = fn(ctx, **args)
+    if inspect.isawaitable(out):
+        out = await out
+    return json.dumps(out, default=str)
 
 
 @tool("List upcoming events for this chat: deadlines, quizzes, exams, room/time changes, plans, recent announcements.",

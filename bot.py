@@ -37,8 +37,9 @@ async def on_message(message: discord.Message):
     if bot.user in message.mentions or replied_to_bot or handlers.looks_like_question(message.content):
         q = message.content.replace(bot.user.mention, "").strip()
         async with message.channel.typing():
-            reply = await qa.answer(q, message.author.display_name, message.guild.id if message.guild else None,
-                                    message.channel.id, message.author.id)
+            gid = message.guild.id if message.guild else None
+            reply = await qa.answer(q, message.author.display_name, gid, message.channel.id, message.author.id,
+                                    guild=message.guild, context=db.get_setting(gid, "context"))
         await message.reply(reply, mention_author=False)
         return
 

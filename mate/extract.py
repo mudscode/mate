@@ -82,8 +82,9 @@ def _plausible(e: Event, anchor: datetime, text: str = "") -> bool:
 
 
 async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = False,
-                  attachments: list[tuple[bytes, str]] = (), effort: str = "low") -> List[Event]:
-    """attachments: list of (bytes, mime). effort: 'low' for chat lines, 'medium' for documents."""
+                  attachments: list[tuple[bytes, str]] = (), effort: str = "low", context: str = "") -> List[Event]:
+    """attachments: list of (bytes, mime). effort: 'low' for chat lines, 'medium' for documents.
+    context: one sentence about this group (course name, who the instructor is), set per server."""
     local = sent_at.astimezone(TZ)
     content = []
     for i, (data, mime) in enumerate(attachments):
@@ -99,7 +100,7 @@ async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = Fa
 
     resp = await client().responses.parse(
         model=MODEL,
-        instructions=SYSTEM,
+        instructions=SYSTEM + (f"\n\nAbout this group: {context}" if context else ""),
         reasoning={"effort": effort},
         input=[{"role": "user", "content": content}],
         text_format=Extraction,

@@ -38,6 +38,8 @@ def init():
             created_at TEXT, status TEXT DEFAULT 'active', key TEXT, discord_event_id INTEGER);
         CREATE TABLE IF NOT EXISTS notes(
             id INTEGER PRIMARY KEY, guild_id INTEGER, chat_id INTEGER, author TEXT, note TEXT, created_at TEXT);
+        CREATE TABLE IF NOT EXISTS settings(
+            guild_id INTEGER, key TEXT, value TEXT, PRIMARY KEY(guild_id, key));
         CREATE TABLE IF NOT EXISTS reminders(
             id INTEGER PRIMARY KEY, event_id INTEGER, kind TEXT, sent_at TEXT,
             UNIQUE(event_id, kind));
@@ -150,6 +152,17 @@ def search_notes(query, guild_id=None, limit=10):
         q += " AND guild_id=?"; args.append(guild_id)
     with conn() as c:
         return [dict(r) for r in c.execute(q + " ORDER BY created_at DESC LIMIT ?", args + [limit])]
+
+
+def get_setting(guild_id, key, default=""):
+    with conn() as c:
+        r = c.execute("SELECT value FROM settings WHERE guild_id IS ? AND key=?", (guild_id, key)).fetchone()
+        return r["value"] if r else default
+
+
+def set_setting(guild_id, key, value):
+    with conn() as c:
+        c.execute("INSERT OR REPLACE INTO settings(guild_id,key,value) VALUES(?,?,?)", (guild_id, key, value))
 
 
 def due_reminders():
