@@ -1,7 +1,7 @@
 """SQLite storage. All datetimes are ISO local strings 'YYYY-MM-DDTHH:MM' in Asia/Karachi,
 so plain string comparison orders them. Memory is scoped per server (guild_id); chat_id is the
 channel an item came from, used for posting reminders back where it belongs."""
-import sqlite3, difflib
+import re, sqlite3, difflib
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
@@ -57,6 +57,10 @@ def add_message(guild_id, chat_id, msg_id, sender, text, ts, has_file=False):
 
 
 def _similar(a, b):
+    """Fuzzy title match, but 'Quiz 2' and 'Quiz 3' are never the same thing: numbers must agree."""
+    na, nb = re.findall(r"\d+", a), re.findall(r"\d+", b)
+    if na and nb and na[0] != nb[0]:
+        return 0.0
     return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 

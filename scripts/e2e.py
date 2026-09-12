@@ -97,10 +97,10 @@ class Run:
         print("1. announcement -> ✅, DB row, Events tab")
         m = await self.say(f"Quiz {TAG} will be on {weekday(3)} 10am, chapters 1 and 2. Room 104.")
         check("✅ reaction", await self.reacted(m))
-        rows = await poll_until(lambda: asyncio.sleep(0, result=sql("SELECT due_at, discord_event_id FROM events WHERE chat_id=? AND status='active' AND title LIKE ?", self.ch.id, f"%Quiz {TAG}%")))
-        check("one event row", bool(rows) and len(rows) == 1)
-        deid = rows[0][1] if rows else None
-        ok = await poll_until(lambda: asyncio.sleep(0, result=sql("SELECT discord_event_id FROM events WHERE chat_id=? AND title LIKE ?", self.ch.id, f"%Quiz {TAG}%")[0][0]))
+        q_rows = lambda: sql("SELECT due_at, discord_event_id FROM events WHERE chat_id=? AND status='active' AND title LIKE ?", self.ch.id, f"%Quiz {TAG}%")
+        rows = await poll_until(lambda: asyncio.sleep(0, result=q_rows()))
+        check("one event row in this channel", bool(rows) and len(rows) == 1, "" if rows else "row missing or merged into another channel's event")
+        await poll_until(lambda: asyncio.sleep(0, result=any(r[1] for r in q_rows())))
         evs = await self.ch.guild.fetch_scheduled_events()
         check("mirrored to Events tab", any(f"Quiz {TAG}" in e.name for e in evs))
 
@@ -110,7 +110,7 @@ class Run:
         check("reply names the quiz", r is not None, (r.content[:90] if r else ""))
 
         print("3. reschedule -> same row, new date, Events entry moved, no duplicate")
-        before = sql("SELECT due_at FROM events WHERE chat_id=? AND title LIKE ?", self.ch.id, f"%Quiz {TAG}%")[0][0]
+        before = (q_rows() or [(None, None)])[0][0]
         m = await self.say(f"Quiz {TAG} moved to {weekday(4)} 9am, same room.")
         check("✅ reaction", await self.reacted(m))
         moved = await poll_until(lambda: asyncio.sleep(0, result=(lambda r: r and len(r) == 1 and r[0][0] != before)(sql("SELECT due_at FROM events WHERE chat_id=? AND status='active' AND title LIKE ?", self.ch.id, f"%Quiz {TAG}%"))))
@@ -158,7 +158,8 @@ class Run:
             if TAG in e.name and e.creator_id == MATE_ID:
                 await e.delete(); n += 1
         with sqlite3.connect(config.DB_PATH) as c:
-            ids = [r[0] for r in c.execute("SELECT id FROM events WHERE chat_id=?", (self.ch.id,))]
+            ids = [r[0] for r in c.execute("SELECT id FROM events WHERE chat_id=? OR title LIKE ?", (self.ch.id, f"%{TAG}%"))]
+            c.executemany("DELETE FROM events WHERE id=?", [(i,) for i in ids])
             for t in ("polls", "personal_reminders"):
                 c.executemany(f"DELETE FROM {t} WHERE event_id=?", [(i,) for i in ids])
             for t in ("events", "messages", "resources", "notes"):
@@ -179,8 +180,10 @@ async def main():
         guild = discord.utils.get(client.guilds, name=opts.guild) if opts.guild else (client.guilds[0] if client.guilds else None)
         if guild is None:
             sys.exit("tester bot is not in any server (or --guild name is wrong)")
-        if guild.get_member(MATE_ID) is None:
-            print(f"warning: Mate ({MATE_ID}) not visible in {guild.name}; is it running and invited?")
+        try:
+            await guild.fetch_member(MATE_ID)
+        except discord.NotFound:
+            sys.exit(f"Mate ({MATE_ID}) is not in {guild.name}")
         ch = discord.utils.get(guild.text_channels, name=CHANNEL) or await guild.create_text_channel(CHANNEL, reason="mate e2e")
         print(f"server: {guild.name}   channel: #{ch.name} ({ch.id})   tester: {client.user}   mate id: {MATE_ID}\n")
         run = Run(client, ch)

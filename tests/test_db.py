@@ -33,6 +33,14 @@ class DedupeTests(unittest.TestCase):
         self.assertEqual(s, "updated")
         self.assertEqual(len(db.list_events(90, G)), 1)
 
+    def test_numbered_siblings_on_adjacent_days_stay_separate(self):
+        db.upsert_event(mk("quiz-2", "Quiz 2 (Ch. 3 & 4)", "quiz", "2026-09-16T10:00"), G, 1, 1)
+        s, _ = db.upsert_event(mk("quiz-42", "Quiz 42 (Ch. 1 & 2)", "quiz", "2026-09-15T10:00"), G, 1, 2)
+        self.assertEqual(s, "inserted")
+        s, _ = db.upsert_event(mk("quiz-3", "Quiz 3 (Ch. 5 & 6)", "quiz", "2026-09-17T10:00"), G, 1, 3)
+        self.assertEqual(s, "inserted")
+        self.assertEqual(len(db.list_events(30, G)), 3)
+
     def test_reschedule_clears_reminders(self):
         _, eid = db.upsert_event(mk("a1", "Assignment 1", "deadline", "2026-09-18T23:59"), G, 1, 1)
         db.mark_reminder(eid, "24h")
