@@ -58,7 +58,8 @@ Never invent dates. If a date is genuinely unspecified, set due_at to null.
 Messages may be in English, Urdu, or Roman Urdu mixed with English ('kal quiz hai 10 baje ch 5',
 'sir ne kaha assignment jumma tak LMS pe submit karni hai'). Understand them the same way; write titles and
 details in English. Roman Urdu time words: kal = tomorrow, parso = day after tomorrow, agle hafte = next week,
-subah = morning, sham = evening, raat = night, baje = o'clock; days: peer/somwar = Monday, mangal = Tuesday,
+subah = morning, sham = evening, raat = night, 'N baje' = N o'clock (a time, never a date; 'raat 12 baje' =
+midnight at the end of that day, 'jumma raat 12 baje tak' = Friday 23:59); days: peer/somwar = Monday, mangal = Tuesday,
 budh = Wednesday, jumeraat = Thursday, jumma = Friday, hafta = Saturday, itwar = Sunday."""
 
 
