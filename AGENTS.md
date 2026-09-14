@@ -90,7 +90,7 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
     python bot.py
 
 ## Demo
-Video (2 min): https://youtu.be/n8jtak_XPLg — script in `demo/VIDEO_SCRIPT.md`. Live version:
+Two-minute script in `demo/VIDEO_SCRIPT.md`. Live version:
 1. Channel is pre-seeded via `!backfill`. Ask "what's due this week?"
 2. Instructor: "Quiz 3 moved to Thursday 9am." Bot reacts ✅. Ask again; answer changed, no duplicate,
    and the Events tab entry moved with it.

@@ -6,7 +6,6 @@ Built solo in one day at the **AI Tinkerers "Agents, Everywhere" global hackatho
 chapter, 12 September 2026, as team *single-threaded*. The brief was an agent that lives where people
 already talk; this one lives in a course's Discord server and acts as the class's memory.
 
-- Demo video (2 min): https://youtu.be/n8jtak_XPLg
 - Stack: one Python process, discord.py + OpenAI Responses API (gpt-5-mini) + SQLite. No web server, no queue.
 
 ## What it does
