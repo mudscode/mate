@@ -2,6 +2,13 @@
 
 Mate is the memory of a class Discord server. People talk normally; it quietly remembers.
 
+Built solo in one day at the **AI Tinkerers "Agents, Everywhere" global hackathon**, Islamabad / Rawalpindi
+chapter, 12 September 2026, as team *single-threaded*. The brief was an agent that lives where people
+already talk; this one lives in a course's Discord server and acts as the class's memory.
+
+- Demo video (2 min): https://youtu.be/n8jtak_XPLg
+- Stack: one Python process, discord.py + OpenAI Responses API (gpt-5-mini) + SQLite. No web server, no queue.
+
 ## What it does
 - Silently extracts what matters from ordinary chat — deadlines, quizzes, exams, room changes, student
   plans (trips, study sessions) — and from dropped PDFs and screenshots. Reacts ✅, doesn't chatter.
@@ -30,7 +37,7 @@ Made a mistake? React ❌ to a message Mate ✅'d and it forgets everything it l
 2. OAuth2 → URL Generator → scope `bot` → permissions: View Channels, Send Messages, Read Message History,
    Add Reactions, Attach Files, **Manage Events** (needed for the Events tab mirror).
    Open the URL, add to your server.
-3. Create roles named `Instructor` / `TA` on the server; give one teammate the Instructor role.
+3. Optional: create roles named `Instructor` / `TA` and assign them. The server owner always counts as staff.
 4. `cp .env.example .env` and fill in both tokens.
 5. `python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt && python bot.py`
 
@@ -56,9 +63,11 @@ Paste a real class chat into the channel (one message per line is fine), then `!
 ## Testing
 - `scripts/test.sh` – offline suite; fake discord.py, throwaway DB, no network.
 - `RUN_LIVE=1 scripts/test.sh` – also runs the tests that call the real model.
-- `python scripts/e2e.py <channel_id>` – real Discord: a second tester bot posts and checks a running
-  `bot.py`. Needs `MATE_TEST_BOT_TOKEN` and `MATE_TEST_BOT_IDS` in `.env`.
+- `python scripts/e2e.py` – real Discord, no hands: a second tester bot creates a scratch channel, plays
+  student and instructor against a running `bot.py`, asserts 23 checks, and cleans up. Needs only
+  `MATE_TEST_BOT_TOKEN` in `.env`.
 - `python scripts/reset.py` – fresh start: deletes `mate.db` and the bot's own scheduled events.
+- `python scripts/seed.py` – re-posts the demo chat and PDF into a channel and waits for the ✅s.
 - `python scripts/try_extract.py` – eyeball extraction on sample lines before touching Discord.
 
 ## Layout
@@ -68,9 +77,10 @@ mate/
   config.py db.py extract.py qa.py tools.py
   handlers.py reminders.py discord_events.py hooks.py
   features/            polls.py resources.py personal_reminders.py digest.py
+                       context.py memory_edit.py undo.py
 tests/                 fakes.py + unit tests (test_live.py needs RUN_LIVE=1)
-scripts/               test.sh try_extract.py e2e.py reset.py
-demo/                  seed_chat.txt course_outline.pdf
+scripts/               test.sh try_extract.py e2e.py reset.py seed.py
+demo/                  seed_chat.txt course_outline.pdf VIDEO_SCRIPT.md
 ```
 A feature is one file in `mate/features/`: it registers hooks and Q&A tools on import, owns its tables,
 and is listed in `mate/features/__init__.py`. `bot.py` doesn't change.
@@ -78,3 +88,4 @@ and is listed in `mate/features/__init__.py`. `bot.py` doesn't change.
 ## Demo assets
 - `demo/seed_chat.txt` – paste into the class channel as one message; the bot extracts ~10 events from it
 - `demo/course_outline.pdf` – drop into the channel; adds the rest of the semester in one go
+- `demo/VIDEO_SCRIPT.md` – the two-minute demo, beat by beat

@@ -32,8 +32,8 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - `mate/hooks.py`           `on_event_logged` / `on_message_ingested` / `on_tick`; errors are printed, not raised
 - `mate/features/`          `polls` `resources` `personal_reminders` `digest` `context` `memory_edit` `undo` — one file each
 - `tests/`                  `fakes.py` (fake discord.py) + unit tests; `test_live.py` gated by `RUN_LIVE=1`
-- `scripts/`                `test.sh` `try_extract.py` `e2e.py` `reset.py`
-- `demo/`                   `seed_chat.txt` (paste as one message), `course_outline.pdf`
+- `scripts/`                `test.sh` `try_extract.py` `e2e.py` `reset.py` `seed.py`
+- `demo/`                   `seed_chat.txt` (paste as one message), `course_outline.pdf`, `VIDEO_SCRIPT.md`
 - `PLAN.md`                 timeline, cut lines, demo script, gotchas. Read it.
 
 ## How to add a feature
@@ -45,9 +45,11 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 ## Testing
 - `scripts/test.sh` — the offline suite: fakes for discord.py, a throwaway DB, no network.
 - `RUN_LIVE=1 scripts/test.sh` — also runs `tests/test_live.py`, which makes real model calls.
-- `python scripts/e2e.py <channel_id>` — real Discord: a second "tester" bot posts and asserts against a
-  running `bot.py`. Needs `MATE_TEST_BOT_TOKEN` and `MATE_TEST_BOT_IDS` in `.env`.
-- `python scripts/reset.py` — fresh start: deletes `mate.db` and every scheduled event this bot created.
+- `python scripts/e2e.py` — real Discord: a second "tester" bot creates a scratch channel, plays student and
+  instructor against a running `bot.py`, asserts 23 checks, and cleans up. Needs only `MATE_TEST_BOT_TOKEN`
+  in `.env`; the tester's id is derived from the token.
+- `python scripts/reset.py` — fresh start: deletes `mate.db` and every scheduled event this bot created,
+  keeping per-server `!context`. `python scripts/seed.py` re-posts the demo chat and PDF.
 
 ## Conventions
 - Datetimes are ISO local strings `YYYY-MM-DDTHH:MM` in Asia/Karachi; string comparison orders them.
@@ -60,9 +62,9 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - Every dated event is mirrored as a native Discord scheduled event; the bot needs the **Manage Events**
   permission (invite permissions integer `283467942976`).
 - `notes` table holds free-form facts from "remember that ..."; `search_messages` searches notes too.
-- Q&A tools: `list_events` `search_messages` `recent_messages` `remember` `remind_me` `my_reminders` `plan_poll` `find_resources` `update_event` `forget_event` `group_context`
-  `my_reminders` `plan_poll` `find_resources` (features). Adding one = one decorated function; the schema
-  is built from the signature.
+- Q&A tools: `list_events` `search_messages` `recent_messages` `remember` `remind_me` `my_reminders`
+  `plan_poll` `find_resources` `update_event` `forget_event` `group_context`. Adding one = one decorated
+  function; the schema is built from the signature.
 - Features own their tables (`polls`, `resources`, `personal_reminders`, `digests`) and create them on demand.
 - Reminders fire once at 24h and once at 2h before `due_at`, in-channel. Personal reminders are DMs and
   recompute their fire time every tick, so a rescheduled event drags them along.
@@ -87,7 +89,8 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
     python scripts/try_extract.py  # sanity check extraction
     python bot.py
 
-## Demo (4 min)
+## Demo
+Video (2 min): https://youtu.be/n8jtak_XPLg — script in `demo/VIDEO_SCRIPT.md`. Live version:
 1. Channel is pre-seeded via `!backfill`. Ask "what's due this week?"
 2. Instructor: "Quiz 3 moved to Thursday 9am." Bot reacts ✅. Ask again; answer changed, no duplicate,
    and the Events tab entry moved with it.
