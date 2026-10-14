@@ -33,6 +33,9 @@ class Event(BaseModel):
                     "null only when no concrete date exists.")
     details: str = Field(description="Everything a student needs: chapters, room, format, submission link, etc.")
     confidence: float = Field(ge=0, le=1)
+    cancelled: bool = Field(default=False, description="True when the message says this item is cancelled, called off or not "
+                                        "happening ('the group study is canceled', 'no quiz tomorrow'). key and "
+                                        "title still name the item being cancelled; due_at may be null.")
 
 
 class Extraction(BaseModel):
@@ -57,6 +60,9 @@ Messages marked [instructor/staff] are authoritative: extract with high confiden
 A student relaying an instructor ('sir said quiz is Monday') is medium confidence.
 A student guessing ('I think the quiz is Monday?') is low confidence.
 
+A message saying something is cancelled or called off is NOT a new event: return that item with cancelled=true,
+reusing its key from the remembered items if it is listed there.
+
 For a course outline, syllabus, or schedule document, extract every dated item as its own event.
 Never invent dates. If a date is genuinely unspecified, set due_at to null.
 
@@ -77,6 +83,8 @@ def _plausible(e: Event, anchor: datetime, text: str = "") -> bool:
     """Python checks the model's date: window, and that it lands on the weekday / 'tomorrow' the text names."""
     if e.confidence < 0.5:
         return False
+    if e.cancelled:                           # no date needed: handlers resolves it to an item already remembered
+        return True
     if e.due_at is None:                      # undated facts live in the chat log, not the events table
         return False
     try:
@@ -89,7 +97,7 @@ def _plausible(e: Event, anchor: datetime, text: str = "") -> bool:
     a = anchor.replace(tzinfo=None)
     if not (a - timedelta(hours=1) <= due <= a + timedelta(days=200)):   # nothing is announced after it happened
         return False
-    if e.kind == "announcement" and abs(due - a) <= timedelta(minutes=10):   # "slides are up": news, not an event
+    if abs(due - a) <= timedelta(minutes=10):   # dated at the message itself ("slides are up", "X is canceled"): not an event
         return False
     return day_words_match(text, due, a)
 
@@ -110,9 +118,11 @@ def day_words_match(text: str, due: datetime, anchor: datetime) -> bool:
 
 
 async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = False,
-                  attachments: list[tuple[bytes, str]] = (), effort: str = "low", context: str = "") -> Extraction:
+                  attachments: list[tuple[bytes, str]] = (), effort: str = "low", context: str = "",
+                  known: list[dict] = ()) -> Extraction:
     """attachments: list of (bytes, mime). effort: 'low' for chat lines, 'medium' for documents.
     context: one sentence about this group (course name, who the instructor is), set per server.
+    known: upcoming events already remembered (dicts with key/title/due_at) so the model reuses their keys.
     Returns the Extraction with only the events Python accepted; .asks_memory flags a question the
     regex router may have missed (typos, Roman Urdu)."""
     local = sent_at.astimezone(TZ)
@@ -125,6 +135,11 @@ async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = Fa
         elif mime.startswith("image/"):
             content.append({"type": "input_image", "image_url": f"data:{mime};base64,{b64}"})
     who = f"{sender} [instructor/staff]" if is_staff else sender
+    if known:
+        items = "\n".join(f"- {k['key']}: {k['title']} ({k['due_at']})" for k in list(known)[:40])
+        content.append({"type": "input_text", "text":
+            f"Items already remembered for this group (reuse the key when a message reschedules, corrects or "
+            f"cancels one of them):\n{items}"})
     content.append({"type": "input_text", "text":
         f"Message sent {local.strftime('%A %Y-%m-%d %H:%M')} (Asia/Karachi) by {who}:\n\n{text or '(no text; see attachment)'}"})
 

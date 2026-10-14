@@ -35,6 +35,18 @@ class DedupeTests(unittest.TestCase):
         self.assertEqual(s, "updated")
         self.assertEqual(len(db.list_events(90, G)), 1)
 
+    def test_find_active_loose_matches_a_cancellation_by_title(self):
+        db.upsert_event(mk("group-study-library", "Group study (library)", "plan", day(1, "16:00")), G, 1, 1)
+        gone = mk("group-study", "Group study canceled", "plan", None)
+        self.assertIsNone(db.find_active(gone, G))                       # strict: different key, no date
+        hit = db.find_active(gone, G, loose=True)
+        self.assertEqual(hit["key"], "group-study-library")
+        self.assertIsNone(db.find_active(mk("quiz-9", "Quiz 9 canceled", "quiz", None), G, loose=True))
+        self.assertEqual(db.list_events(30, G)[0]["key"], "group-study-library")   # list_events exposes keys
+        row = db.supersede(hit["id"])
+        self.assertEqual(row["key"], "group-study-library")
+        self.assertEqual(db.list_events(30, G), [])
+
     def test_numbered_siblings_on_adjacent_days_stay_separate(self):
         db.upsert_event(mk("quiz-2", "Quiz 2 (Ch. 3 & 4)", "quiz", day(5)), G, 1, 1)
         s, _ = db.upsert_event(mk("quiz-42", "Quiz 42 (Ch. 1 & 2)", "quiz", day(4)), G, 1, 2)

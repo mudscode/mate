@@ -148,6 +148,13 @@ class FakeMessage:
     async def add_reaction(self, emoji):
         self.reactions_added.append(str(emoji))
 
+    async def delete(self):
+        self.deleted = True
+        if self.channel is not None:
+            self.channel.messages.pop(self.id, None)
+            if self in self.channel.sent:
+                self.channel.sent.remove(self)
+
     async def reply(self, content=None, **kw):
         m = FakeMessage(content or "", author=self.guild.me if self.guild else None, channel=self.channel)
         self.replies.append(m)

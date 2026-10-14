@@ -23,7 +23,8 @@ async def main():
         evs = res.events
         print(f"\n> {text}" + ("   [asks memory]" if res.asks_memory else ""))
         for e in evs:
-            print(f"   {e.kind:13} {e.key:14} {e.due_at}  {e.title}  (conf {e.confidence})")
+            print(f"   {e.kind:13} {e.key:14} {e.due_at}  {e.title}  (conf {e.confidence})"
+                  + ("  [cancelled]" if e.cancelled else ""))
         if not evs:
             print("   (no event)")
 

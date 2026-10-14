@@ -16,6 +16,17 @@ def _fields(ev: dict):
             (ev["details"] or "")[:1000], (m.group(0).strip() if m else "See #chat")[:100])
 
 
+async def remove(guild, discord_event_id) -> None:
+    """Delete the mirrored scheduled event, if it still exists. Never raises."""
+    if guild is None or not discord_event_id:
+        return
+    try:
+        se = await guild.fetch_scheduled_event(int(discord_event_id))
+        await se.delete()
+    except (discord.NotFound, discord.HTTPException) as e:
+        print(f"discord_events: can't delete scheduled event {discord_event_id}: {e}")
+
+
 async def sync(guild, ev: dict) -> int | None:
     """Create or update the scheduled event mirroring `ev`. Returns its Discord id, or None."""
     if guild is None or not ev or not ev.get("due_at"):

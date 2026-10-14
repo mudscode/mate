@@ -47,6 +47,28 @@ async def on_plan(message, ev, status):
                   (ev["id"], ev["guild_id"], ev["chat_id"], getattr(sent, "id", None), db.now_local()))
 
 
+@hooks.on_event_logged
+async def on_cancelled(message, ev, status):
+    """The plan was called off: take its poll down and forget the row."""
+    if status != "cancelled":
+        return
+    _ensure()
+    with db.conn() as c:
+        rows = c.execute("SELECT chat_id, poll_message_id FROM polls WHERE event_id=?", (ev["id"],)).fetchall()
+        c.execute("DELETE FROM polls WHERE event_id=?", (ev["id"],))
+    for r in rows:
+        if not r["poll_message_id"]:
+            continue
+        ch = message.channel if r["chat_id"] == message.channel.id else \
+            getattr(message.guild, "get_channel", lambda cid: None)(r["chat_id"])
+        if ch is None:
+            continue
+        try:
+            await (await ch.fetch_message(r["poll_message_id"])).delete()
+        except discord.HTTPException as e:
+            print(f"poll cleanup failed for event {ev['id']}: {e}")
+
+
 @tools.tool("The RSVP poll Mate posted for a student plan (trip, study session, meetup), with live vote counts "
             "and who voted. Use for 'who's coming to the trip?', 'how many are in for the study session?'.",
             query=("string", "A word or two from the plan's title, e.g. 'trip' or 'study session'."))

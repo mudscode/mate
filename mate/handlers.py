@@ -75,14 +75,17 @@ async def ingest(message: discord.Message, react: bool = True) -> int:
     async with sem:
         res = await extract.extract(message.content, message.author.display_name, message.created_at,
                                     is_staff(message.author), atts, effort="medium" if atts else "low",
-                                    context=db.get_setting(guild_id, "context"))
-    events = res.events
-    if not events and res.asks_memory and react:      # the regex router missed a question (typo, Roman Urdu)
-        await answer(message)
-        return 0
-    heads_up, logged = None, []
+                                    context=db.get_setting(guild_id, "context"),
+                                    known=db.list_events(200, guild_id))
+    heads_up, logged = None, []                       # logged: (event id, 'inserted' | 'updated' | 'cancelled')
     async with db_lock:
-        for e in events:
+        for e in res.events:
+            if e.cancelled:                           # "the group study is canceled": retire the item, don't add one
+                match = db.find_active(e, guild_id, loose=True)
+                if match is not None:
+                    db.supersede(match["id"])
+                    logged.append((match["id"], "cancelled"))
+                continue
             status, eid = db.upsert_event(e, guild_id, message.channel.id, message.id)
             logged.append((eid, status))
             if status == "inserted" and heads_up is None:
@@ -90,7 +93,10 @@ async def ingest(message: discord.Message, react: bool = True) -> int:
                 if clash:
                     day = datetime.fromisoformat(e.due_at).strftime("%a %d %b")
                     heads_up = f"Heads up: **{e.title}** lands on the same day as **{clash[0]['title']}** ({day})."
-    if events and react:
+    if not logged and res.asks_memory and react:      # the regex router missed a question (typo, Roman Urdu)
+        await answer(message)
+        return 0
+    if logged and react:
         try:
             await message.add_reaction("✅")
         except discord.HTTPException:
@@ -99,9 +105,12 @@ async def ingest(message: discord.Message, react: bool = True) -> int:
             await message.channel.send(heads_up)
     for eid, status in logged:
         await hooks.fire(hooks.EVENT_LOGGED, message, db.get_event(eid), status)
-    for eid, _ in logged:                     # mirror to the Events tab last: Discord rate-limits these calls
+    for eid, status in logged:                # mirror to the Events tab last: Discord rate-limits these calls
         async with _sync_locks.setdefault(eid, asyncio.Lock()):   # same event never mirrored twice at once
+            if status == "cancelled":
+                await discord_events.remove(message.guild, db.get_event(eid)["discord_event_id"])
+                continue
             deid = await discord_events.sync(message.guild, db.get_event(eid))
             if deid is not None:
                 db.set_discord_event_id(eid, deid)
-    return len(events)
+    return len(logged)

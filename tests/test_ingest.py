@@ -88,6 +88,42 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(seen["effort"], "medium")
         self.assertEqual(seen["atts"][0][1], "application/pdf")
 
+    def test_cancellation_retires_the_plan_instead_of_adding_one(self):
+        run(handlers.ingest(FakeMessage("@everyone road trip to Murree on Wednesday? leaving 7am", self.ali, self.channel)))
+        self.assertEqual(len(self.guild.scheduled_events), 1)
+        gone = dict(TRIP, title="Murree trip cancelled", due_at=None, cancelled=True)
+        extract.extract = fake_extract({"canceled": [gone]})
+        m = FakeMessage("the murree trip is canceled guys", self.ali, self.channel)
+        self.assertEqual(run(handlers.ingest(m)), 1)
+        self.assertEqual(m.reactions_added, ["✅"])
+        self.assertEqual([e["key"] for e in db.list_events(30, self.guild.id)], [])        # retired, not duplicated
+        self.assertEqual(self.guild.scheduled_events, {})                                  # Events tab entry removed
+        with db.conn() as c:
+            self.assertEqual(c.execute("SELECT status FROM events WHERE key='murree-trip'").fetchone()[0], "superseded")
+
+    def test_cancellation_matches_by_title_when_the_key_drifts(self):
+        run(handlers.ingest(FakeMessage("road trip to Murree on Wednesday, leaving 7am", self.ali, self.channel)))
+        drifted = dict(TRIP, key="trip-cancelled", title="Murree road trip cancelled", due_at=None, cancelled=True)
+        extract.extract = fake_extract({"canceled": [drifted]})
+        run(handlers.ingest(FakeMessage("murree road trip canceled", self.ali, self.channel)))
+        self.assertEqual(db.list_events(30, self.guild.id), [])
+
+    def test_cancelling_something_unknown_is_silent(self):
+        ghost = dict(TRIP, key="ski-trip", title="Ski trip", due_at=None, cancelled=True)
+        extract.extract = fake_extract({"canceled": [ghost]})
+        m = FakeMessage("the ski trip is canceled", self.ali, self.channel)
+        self.assertEqual(run(handlers.ingest(m)), 0)
+        self.assertEqual(m.reactions_added, [])
+
+    def test_extractor_is_told_what_is_already_remembered(self):
+        run(handlers.ingest(FakeMessage("Quiz 2 will be on Wednesday 10am", self.sir, self.channel)))
+        seen = {}
+        async def spy(text, *a, known=(), **kw):
+            seen["known"] = [k["key"] for k in known]; return extract.Extraction(events=[], asks_memory=False)
+        extract.extract = spy
+        run(handlers.ingest(FakeMessage("Quiz 2 moved to Thursday", self.sir, self.channel)))
+        self.assertEqual(seen["known"], ["quiz-2"])
+
     def test_short_but_meaningful_message_reaches_extractor(self):
         calls = []
         async def spy(text, *a, **kw):

@@ -44,6 +44,20 @@ class PollTests(unittest.TestCase):
         with db.conn() as c:
             return [dict(r) for r in c.execute("SELECT * FROM polls")]
 
+    def test_cancelled_plan_takes_its_poll_down(self):
+        if polls.on_cancelled not in hooks.EVENT_LOGGED:
+            hooks.on_event_logged(polls.on_cancelled)
+        self.stub({"road trip": [plan(local(timedelta(days=2)))]})
+        self.ingest("road trip to Murree the day after tomorrow, leaving early")
+        self.assertEqual(len(self.polls_rows()), 1)
+        self.assertIsNotNone(self.channel.sent[0].poll)
+        self.stub({"canceled": [dict(plan(None), cancelled=True, title="Murree trip cancelled")]})
+        m = self.ingest("murree trip is canceled")
+        self.assertEqual(m.reactions_added, ["✅"])
+        self.assertEqual(self.polls_rows(), [])
+        self.assertEqual([x for x in self.channel.sent if x.poll is not None], [])
+        self.assertEqual(db.list_events(60, self.guild.id), [])
+
     def test_new_plan_gets_one_poll(self):
         self.stub({"road trip": [plan(local(timedelta(days=2)))]})
         self.ingest("road trip to Murree the day after tomorrow, leaving early")

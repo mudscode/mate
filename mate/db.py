@@ -66,21 +66,52 @@ def _similar(a, b):
     return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
+def _match(rows, ev, loose=False):
+    """The row `ev` refers to: same key; else same kind at the same minute, or same kind + near-identical title
+    within a day. loose=True (cancellations, which carry no reliable date) also accepts same kind + similar title."""
+    match = next((r for r in rows if r["key"] == ev.key), None)
+    if match is None:
+        for r in rows:
+            if r["kind"] != ev.kind:
+                continue
+            if loose and _similar(ev.title, r["title"]) > 0.6:
+                return r
+            if not (ev.due_at and r["due_at"]):
+                continue
+            same_day = abs((datetime.fromisoformat(ev.due_at) - datetime.fromisoformat(r["due_at"])).days) <= 1
+            if r["due_at"] == ev.due_at or (same_day and _similar(ev.title, r["title"]) > 0.85):
+                return r
+    return match
+
+
+def find_active(ev, guild_id, loose=False):
+    """The active, upcoming event in this server that `ev` refers to, as a dict, or None."""
+    with conn() as c:
+        rows = c.execute("SELECT * FROM events WHERE guild_id=? AND status='active' AND due_at >= ? ORDER BY due_at",
+                         (guild_id, now_local())).fetchall()
+    r = _match(rows, ev, loose)
+    return dict(r) if r else None
+
+
+def supersede(event_id) -> dict | None:
+    """Retire one event: status='superseded' (never deleted) and drop its personal reminders. Returns the row."""
+    with conn() as c:
+        row = c.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+        c.execute("UPDATE events SET status='superseded' WHERE id=?", (event_id,))
+        try:
+            c.execute("DELETE FROM personal_reminders WHERE event_id=?", (event_id,))
+        except sqlite3.OperationalError:          # feature table not created yet
+            pass
+    return dict(row) if row else None
+
+
 def upsert_event(ev, guild_id, chat_id, source_msg_id) -> tuple[str, int]:
     """Insert, or update the existing active event with the same key (reschedules, corrections).
     Falls back to same kind + same minute, or same kind + near-identical title on the same day.
     Returns ('inserted' | 'updated', events.id)."""
     with conn() as c:
         rows = c.execute("SELECT * FROM events WHERE guild_id=? AND status='active'", (guild_id,)).fetchall()
-        match = next((r for r in rows if r["key"] == ev.key), None)
-        if match is None:
-            for r in rows:
-                if r["kind"] != ev.kind or not (ev.due_at and r["due_at"]):
-                    continue
-                same_day = abs((datetime.fromisoformat(ev.due_at) - datetime.fromisoformat(r["due_at"])).days) <= 1
-                if r["due_at"] == ev.due_at or (same_day and _similar(ev.title, r["title"]) > 0.85):
-                    match = r
-                    break
+        match = _match(rows, ev)
         if match:
             c.execute("UPDATE events SET key=?, kind=?, title=?, due_at=?, details=?, source_msg_id=?, confidence=? WHERE id=?",
                       (ev.key, ev.kind, ev.title, ev.due_at, ev.details, source_msg_id, ev.confidence, match["id"]))
@@ -118,7 +149,7 @@ def same_day_events(guild_id, due_at, exclude_id, exclude_msg_id=None):
 def list_events(days_ahead=14, guild_id=None):
     now = now_local()
     until = (datetime.now(TZ) + timedelta(days=days_ahead)).strftime("%Y-%m-%dT%H:%M")
-    q = "SELECT id,title,kind,due_at,details,confidence FROM events WHERE status='active' AND due_at BETWEEN ? AND ?"
+    q = "SELECT id,key,title,kind,due_at,details,confidence FROM events WHERE status='active' AND due_at BETWEEN ? AND ?"
     args = [now, until]
     if guild_id:
         q += " AND guild_id=?"; args.append(guild_id)
