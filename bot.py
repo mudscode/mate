@@ -5,7 +5,7 @@ import os
 import discord
 from discord.ext import commands, tasks
 
-from mate import config, db, features, handlers, hooks, qa, reminders
+from mate import config, db, features, handlers, hooks, reminders
 from mate.handlers import EMOJI, fmt_when
 
 intents = discord.Intents.default()
@@ -35,15 +35,10 @@ async def on_message(message: discord.Message):
     replied_to_bot = (message.reference and isinstance(message.reference.resolved, discord.Message)
                       and message.reference.resolved.author == bot.user)
     if bot.user in message.mentions or replied_to_bot or handlers.looks_like_question(message.content):
-        q = message.content.replace(bot.user.mention, "").strip()
-        async with message.channel.typing():
-            gid = message.guild.id if message.guild else None
-            reply = await qa.answer(q, message.author.display_name, gid, message.channel.id, message.author.id,
-                                    guild=message.guild, context=db.get_setting(gid, "context"))
-        await message.reply(reply, mention_author=False)
+        await handlers.answer(message)
         return
 
-    await handlers.ingest(message)
+    await handlers.ingest(message)     # may still answer: the extractor flags questions the regex missed
 
 
 @bot.command()

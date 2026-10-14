@@ -2,7 +2,7 @@
 import unittest
 from datetime import datetime, timedelta
 
-from mate import db, extract, handlers, hooks
+from mate import db, extract, handlers, hooks, qa
 from tests.fakes import FakeAttachment, FakeMessage, fake_extract, fresh_db, run, world
 
 NEXT_WEEK = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%dT10:00")
@@ -81,12 +81,38 @@ class IngestTests(unittest.TestCase):
     def test_attachment_is_passed_to_extractor(self):
         seen = {}
         async def spy(text, sender, sent_at, is_staff=False, attachments=(), effort="low", **kw):
-            seen.update(atts=list(attachments), effort=effort); return []
+            seen.update(atts=list(attachments), effort=effort); return extract.Extraction(events=[], asks_memory=False)
         extract.extract = spy
         m = FakeMessage("", self.sir, self.channel, attachments=[FakeAttachment(b"%PDF-1.4", "application/pdf")])
         run(handlers.ingest(m))
         self.assertEqual(seen["effort"], "medium")
         self.assertEqual(seen["atts"][0][1], "application/pdf")
+
+    def test_short_but_meaningful_message_reaches_extractor(self):
+        calls = []
+        async def spy(text, *a, **kw):
+            calls.append(text); return extract.Extraction(events=[], asks_memory=False)
+        extract.extract = spy
+        run(handlers.ingest(FakeMessage("Friday 9am", self.ali, self.channel)))     # 10 chars: worth a look
+        run(handlers.ingest(FakeMessage("lol ok", self.ali, self.channel)))         # 6 chars: not worth a call
+        self.assertEqual(calls, ["Friday 9am"])
+
+    def test_question_the_regex_missed_is_answered_when_the_model_flags_it(self):
+        extract.extract = fake_extract({}, questions=["whne"])
+        real = qa.answer
+        async def fake_answer(q, *a, **kw):
+            return f"answered: {q}"
+        qa.answer = fake_answer
+        try:
+            m = FakeMessage("whne is the quiz bro", self.ali, self.channel)
+            self.assertEqual(run(handlers.ingest(m)), 0)
+            self.assertEqual([r.content for r in m.replies], ["answered: whne is the quiz bro"])
+            self.assertEqual(m.reactions_added, [])
+            old = FakeMessage("whne is the quiz bro", self.ali, self.channel)
+            run(handlers.ingest(old, react=False))                                  # backfill: never answer old questions
+            self.assertEqual(old.replies, [])
+        finally:
+            qa.answer = real
 
 
 async def _rec(seen, *x):

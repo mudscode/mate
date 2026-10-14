@@ -71,8 +71,10 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - Heads-up: when a newly logged event lands on the same day as an existing one, Mate posts one
   unprompted line pointing out the clash.
 - Question routing: a message is answered if it contains `?` **and** a hint word
-  (when/where/what/which/who/how/deadline/due/remind/missed), or is a short question-word opener.
-  "anyone up for a trip Sunday?" is logged as a plan, not answered.
+  (when/where/what/which/who/how/deadline/due/remind/missed, plus kab/kahan/kidhar/kaun/kis; `whens`/`when's`
+  count), or is a short question-word opener. Anything the regex misses (typos, Roman Urdu) still gets one
+  chance: the extractor returns `asks_memory`, and ingest answers when that is set and nothing was logged.
+  "anyone up for a trip Sunday?" is logged as a plan, not answered. Messages under 8 chars skip the model.
 
 - Chat may be English, Urdu or Roman Urdu; the prompt maps kal/parso/jumma etc., and `extract._plausible`
   checks the model's date against those words in Python. A deadline at 00:00 becomes 23:59 of the day before.

@@ -5,11 +5,14 @@ from datetime import datetime
 
 import discord
 
-from . import db, discord_events, extract, hooks
+from . import db, discord_events, extract, hooks, qa
 from .config import STAFF_ROLES, TEST_BOT_IDS
 
-QUESTION_HINTS = ("when", "where", "what", "which", "who", "how", "deadline", "due", "remind", "missed", "miss")
-QUESTION_STARTERS = ("when", "where", "what", "whats", "what's", "who", "how", "is", "are", "does", "did", "any")
+QUESTION_HINTS = ("when", "where", "what", "which", "who", "how", "deadline", "due", "remind", "missed", "miss",
+                  "kab", "kahan", "kidhar", "kaun", "kis")        # Roman Urdu: when, where, where, who, which
+QUESTION_STARTERS = ("when", "whens", "when's", "where", "wheres", "where's", "what", "whats", "what's", "who", "how",
+                     "hows", "is", "are", "does", "did", "any", "kab", "kahan", "kidhar")
+MIN_CHARS = 8                            # shorter than this and without a file: 'ok', 'lol', 'thanks' — no model call
 EMOJI = {"deadline": "📝", "quiz": "❓", "exam": "📚", "class_change": "🔁", "announcement": "📢", "plan": "🎒"}
 
 sem = asyncio.Semaphore(6)               # cap concurrent model calls during backfill
@@ -32,13 +35,26 @@ def looks_like_question(text: str) -> bool:
     words = t.split()
     if not words or len(words) > 20:
         return False
-    if "?" in t and any(re.search(rf"\b{h}\b", t) for h in QUESTION_HINTS):
+    if "?" in t and any(re.search(rf"\b{h}(?:'?s)?\b", t) for h in QUESTION_HINTS):   # when / whens / when's
         return True
     return words[0] in QUESTION_STARTERS and len(words) <= 8 and words[1:2] != ["a"]   # "what's coming", not "what a day"
 
 
 def fmt_when(due_at: str) -> str:
     return datetime.fromisoformat(due_at).strftime("%a %d %b, %H:%M")
+
+
+async def answer(message: discord.Message) -> str:
+    """Answer a question from memory and reply in-channel. Used for mentions, replies, regex-routed questions,
+    and questions the extractor flagged after the regex missed them."""
+    me = message.guild.me if message.guild else None
+    q = re.sub(rf"<@!?{me.id}>", "", message.content).strip() if me else message.content.strip()
+    gid = message.guild.id if message.guild else None
+    async with message.channel.typing():
+        reply = await qa.answer(q, message.author.display_name, gid, message.channel.id, message.author.id,
+                                guild=message.guild, context=db.get_setting(gid, "context"))
+    await message.reply(reply, mention_author=False)
+    return reply
 
 
 async def ingest(message: discord.Message, react: bool = True) -> int:
@@ -54,12 +70,16 @@ async def ingest(message: discord.Message, react: bool = True) -> int:
     db.add_message(guild_id, message.channel.id, message.id, message.author.display_name, message.content, ts, bool(atts))
     await hooks.fire(hooks.MESSAGE_INGESTED, message)
 
-    if not atts and len(message.content.strip()) < 15:
+    if not atts and len(message.content.strip()) < MIN_CHARS:
         return 0
     async with sem:
-        events = await extract.extract(message.content, message.author.display_name, message.created_at,
-                                       is_staff(message.author), atts, effort="medium" if atts else "low",
-                                       context=db.get_setting(guild_id, "context"))
+        res = await extract.extract(message.content, message.author.display_name, message.created_at,
+                                    is_staff(message.author), atts, effort="medium" if atts else "low",
+                                    context=db.get_setting(guild_id, "context"))
+    events = res.events
+    if not events and res.asks_memory and react:      # the regex router missed a question (typo, Roman Urdu)
+        await answer(message)
+        return 0
     heads_up, logged = None, []
     async with db_lock:
         for e in events:

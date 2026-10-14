@@ -37,6 +37,11 @@ class Event(BaseModel):
 
 class Extraction(BaseModel):
     events: List[Event]
+    asks_memory: bool = Field(
+        description="True only when the sender wants information the group already has: when or where something is, "
+                    "a deadline, what the instructor said, a link, what they missed. Typos and Roman Urdu count "
+                    "('whne is quiz', 'quiz kab hai?'). False for proposals ('trip Sunday 7am?'), rhetorical "
+                    "questions, chit-chat, and questions aimed at a specific person.")
 
 
 SYSTEM = """You are the memory of a class group chat (students plus instructor). Extract anything the group
@@ -105,9 +110,11 @@ def day_words_match(text: str, due: datetime, anchor: datetime) -> bool:
 
 
 async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = False,
-                  attachments: list[tuple[bytes, str]] = (), effort: str = "low", context: str = "") -> List[Event]:
+                  attachments: list[tuple[bytes, str]] = (), effort: str = "low", context: str = "") -> Extraction:
     """attachments: list of (bytes, mime). effort: 'low' for chat lines, 'medium' for documents.
-    context: one sentence about this group (course name, who the instructor is), set per server."""
+    context: one sentence about this group (course name, who the instructor is), set per server.
+    Returns the Extraction with only the events Python accepted; .asks_memory flags a question the
+    regex router may have missed (typos, Roman Urdu)."""
     local = sent_at.astimezone(TZ)
     content = []
     for i, (data, mime) in enumerate(attachments):
@@ -128,6 +135,6 @@ async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = Fa
         input=[{"role": "user", "content": content}],
         text_format=Extraction,
     )
-    if resp.output_parsed is None:
-        return []
-    return [e for e in resp.output_parsed.events if _plausible(e, local, text or '')]
+    out = resp.output_parsed or Extraction(events=[], asks_memory=False)
+    out.events = [e for e in out.events if _plausible(e, local, text or '')]
+    return out

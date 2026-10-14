@@ -19,8 +19,9 @@ SAMPLES = [
 
 async def main():
     for sender, staff, text in SAMPLES:
-        evs = await extract.extract(text, sender, datetime.now(extract.TZ), staff)
-        print(f"\n> {text}")
+        res = await extract.extract(text, sender, datetime.now(extract.TZ), staff)
+        evs = res.events
+        print(f"\n> {text}" + ("   [asks memory]" if res.asks_memory else ""))
         for e in evs:
             print(f"   {e.kind:13} {e.key:14} {e.due_at}  {e.title}  (conf {e.confidence})")
         if not evs:

@@ -22,6 +22,9 @@ def fresh_db():
 
 
 def run(coro):
+    """Each call is a fresh event loop, so forget any OpenAI client cached on the previous one (live tests)."""
+    from mate import extract, qa
+    extract._client = qa._client = None
     return asyncio.run(coro)
 
 
@@ -203,13 +206,15 @@ def world(owner_is_staff=True):
     return guild, channel, owner, student
 
 
-def fake_extract(events_by_text):
-    """Return an async stand-in for extract.extract: text substring -> list[Event]."""
-    from mate.extract import Event
+def fake_extract(events_by_text, questions=()):
+    """Return an async stand-in for extract.extract: text substring -> events. Texts containing any of
+    `questions` come back flagged asks_memory=True (the model noticed a question the regex missed)."""
+    from mate.extract import Event, Extraction
 
     async def _extract(text, sender, sent_at, is_staff=False, attachments=(), effort="low", **kw):
+        asks = any(q in text for q in questions)
         for needle, evs in events_by_text.items():
             if needle in text:
-                return [Event(**e) if isinstance(e, dict) else e for e in evs]
-        return []
+                return Extraction(events=[Event(**e) if isinstance(e, dict) else e for e in evs], asks_memory=asks)
+        return Extraction(events=[], asks_memory=asks)
     return _extract

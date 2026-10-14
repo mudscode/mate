@@ -13,14 +13,21 @@ LIVE = os.getenv("RUN_LIVE") == "1" and os.getenv("OPENAI_API_KEY", "").startswi
 class LiveTests(unittest.TestCase):
     def test_extract_resolves_weekday_deterministically(self):
         from mate import extract
-        evs = run(extract.extract("Quiz 3 will be on Monday 10am, chapters 5 and 6.", "Sir", datetime.now(extract.TZ), True))
+        evs = run(extract.extract("Quiz 3 will be on Monday 10am, chapters 5 and 6.", "Sir", datetime.now(extract.TZ), True)).events
         self.assertEqual(len(evs), 1)
         self.assertEqual(evs[0].key, "quiz-3")
         self.assertEqual(datetime.fromisoformat(evs[0].due_at).weekday(), 0)
 
     def test_noise_yields_nothing(self):
         from mate import extract
-        self.assertEqual(run(extract.extract("anyone got the slides from today", "Ali", datetime.now(extract.TZ))), [])
+        self.assertEqual(run(extract.extract("anyone got the slides from today", "Ali", datetime.now(extract.TZ))).events, [])
+
+    def test_typo_question_is_flagged_but_plan_is_not(self):
+        from mate import extract
+        now = datetime.now(extract.TZ)
+        self.assertTrue(run(extract.extract("whne is the quiz bro", "Ali", now)).asks_memory)
+        self.assertTrue(run(extract.extract("quiz kab hai yaar", "Ali", now)).asks_memory)
+        self.assertFalse(run(extract.extract("road trip Sunday, leaving 7am from the main gate?", "Ali", now)).asks_memory)
 
     def test_qa_uses_memory(self):
         from mate import db, qa
