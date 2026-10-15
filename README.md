@@ -79,12 +79,13 @@ mate/
                        context.py memory_edit.py undo.py
 tests/                 fakes.py + unit tests (test_live.py needs RUN_LIVE=1)
 scripts/               test.sh try_extract.py e2e.py reset.py seed.py
-demo/                  seed_chat.txt course_outline.pdf VIDEO_SCRIPT.md
+demo/                  seed_chat.txt course_outline.pdf VIDEO_SCRIPT.md MEETUP_DEMO.md
 ```
 A feature is one file in `mate/features/`: it registers hooks and Q&A tools on import, owns its tables,
 and is listed in `mate/features/__init__.py`. `bot.py` doesn't change.
 
 ## Demo assets
-- `demo/seed_chat.txt` – paste into the class channel as one message; the bot extracts ~10 events from it
+- `demo/seed_chat.txt` – paste into the class channel as one message; second half of the semester, dates after 17 Oct 2026
 - `demo/course_outline.pdf` – drop into the channel; adds the rest of the semester in one go
-- `demo/VIDEO_SCRIPT.md` – the two-minute demo, beat by beat
+- `demo/VIDEO_SCRIPT.md` – the two-minute hackathon demo, beat by beat
+- `demo/MEETUP_DEMO.md` – run sheet for the AI Tinkerers Islamabad October meetup: pitch, live beats, code to show, takeaways, checklist

@@ -33,7 +33,7 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - `mate/features/`          `polls` `resources` `personal_reminders` `digest` `context` `memory_edit` `undo` — one file each
 - `tests/`                  `fakes.py` (fake discord.py) + unit tests; `test_live.py` gated by `RUN_LIVE=1`
 - `scripts/`                `test.sh` `try_extract.py` `e2e.py` `reset.py` `seed.py`
-- `demo/`                   `seed_chat.txt` (paste as one message), `course_outline.pdf`, `VIDEO_SCRIPT.md`
+- `demo/`                   `seed_chat.txt` (paste as one message), `course_outline.pdf`, `VIDEO_SCRIPT.md` (hackathon), `MEETUP_DEMO.md` (17 Oct meetup)
 - `PLAN.md`                 timeline, cut lines, demo script, gotchas. Read it.
 
 ## How to add a feature
@@ -98,7 +98,7 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
     python bot.py
 
 ## Demo
-Two-minute script in `demo/VIDEO_SCRIPT.md`. Live version:
+Meetup run sheet (AI Tinkerers Islamabad, 17 Oct 2026): `demo/MEETUP_DEMO.md`. Hackathon script: `demo/VIDEO_SCRIPT.md`. Live version:
 1. Channel is pre-seeded via `!backfill`. Ask "what's due this week?"
 2. Instructor: "Quiz 3 moved to Thursday 9am." Bot reacts ✅. Ask again; answer changed, no duplicate,
    and the Events tab entry moved with it.
