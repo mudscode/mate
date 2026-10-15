@@ -8,6 +8,16 @@ already talk; this one lives in a course's Discord server and acts as the class'
 
 - Stack: one Python process, discord.py + OpenAI Responses API (gpt-5-mini) + SQLite. No web server, no queue.
 
+## Three builder takeaways
+
+Shown at the AI Tinkerers Islamabad demo meetup, 17 October 2026. The file to steal first is
+[`scripts/e2e.py`](scripts/e2e.py): a second bot account that plays student and instructor against the
+running Mate on a real Discord server and judges 23 outcomes.
+
+![Your first user should be an agent](demo/takeaway-1.png)
+![Own the hundred lines](demo/takeaway-2.png)
+![More context can make it worse](demo/takeaway-3.png)
+
 ## What it does
 - Silently extracts what matters from ordinary chat — deadlines, quizzes, exams, room changes, student
   plans (trips, study sessions) — and from dropped PDFs and screenshots. Reacts ✅, doesn't chatter.
