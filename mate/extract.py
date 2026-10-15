@@ -41,9 +41,10 @@ class Event(BaseModel):
 class Extraction(BaseModel):
     events: List[Event]
     asks_memory: bool = Field(
-        description="True only when the sender wants information the group already has: when or where something is, "
+        description="True only when the sender is asking the group's memory for a fact: when or where something is, "
                     "a deadline, what the instructor said, a link, what they missed. Typos and Roman Urdu count "
-                    "('whne is quiz', 'quiz kab hai?'). False for proposals ('trip Sunday 7am?'), rhetorical "
+                    "('whne is quiz', 'quiz kab hai?'). False for proposals ('trip Sunday 7am?'), questions to "
+                    "classmates ('did anyone understand the lecture?', 'anyone got the slides?'), rhetorical "
                     "questions, chit-chat, and questions aimed at a specific person.")
 
 
@@ -60,8 +61,8 @@ Messages marked [instructor/staff] are authoritative: extract with high confiden
 A student relaying an instructor ('sir said quiz is Monday') is medium confidence.
 A student guessing ('I think the quiz is Monday?') is low confidence.
 
-A message saying something is cancelled or called off is NOT a new event: return that item with cancelled=true,
-reusing its key from the remembered items if it is listed there.
+A message saying something is cancelled or called off is NOT a new event: return that item with cancelled=true
+and the key you would have given the item itself.
 
 For a course outline, syllabus, or schedule document, extract every dated item as its own event.
 Never invent dates. If a date is genuinely unspecified, set due_at to null.
@@ -118,11 +119,11 @@ def day_words_match(text: str, due: datetime, anchor: datetime) -> bool:
 
 
 async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = False,
-                  attachments: list[tuple[bytes, str]] = (), effort: str = "low", context: str = "",
-                  known: list[dict] = ()) -> Extraction:
+                  attachments: list[tuple[bytes, str]] = (), effort: str = "low", context: str = "") -> Extraction:
     """attachments: list of (bytes, mime). effort: 'low' for chat lines, 'medium' for documents.
     context: one sentence about this group (course name, who the instructor is), set per server.
-    known: upcoming events already remembered (dicts with key/title/due_at) so the model reuses their keys.
+    The model is deliberately NOT shown what is already remembered: a list of known items made it reuse their
+    keys and dates for unrelated new items (a lab became the quiz). Dedupe is db._match's job.
     Returns the Extraction with only the events Python accepted; .asks_memory flags a question the
     regex router may have missed (typos, Roman Urdu)."""
     local = sent_at.astimezone(TZ)
@@ -135,11 +136,6 @@ async def extract(text: str, sender: str, sent_at: datetime, is_staff: bool = Fa
         elif mime.startswith("image/"):
             content.append({"type": "input_image", "image_url": f"data:{mime};base64,{b64}"})
     who = f"{sender} [instructor/staff]" if is_staff else sender
-    if known:
-        items = "\n".join(f"- {k['key']}: {k['title']} ({k['due_at']})" for k in list(known)[:40])
-        content.append({"type": "input_text", "text":
-            f"Items already remembered for this group (reuse the key when a message reschedules, corrects or "
-            f"cancels one of them):\n{items}"})
     content.append({"type": "input_text", "text":
         f"Message sent {local.strftime('%A %Y-%m-%d %H:%M')} (Asia/Karachi) by {who}:\n\n{text or '(no text; see attachment)'}"})
 

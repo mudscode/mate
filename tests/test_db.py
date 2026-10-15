@@ -35,6 +35,12 @@ class DedupeTests(unittest.TestCase):
         self.assertEqual(s, "updated")
         self.assertEqual(len(db.list_events(90, G)), 1)
 
+    def test_same_key_but_a_different_kind_of_thing_stays_separate(self):
+        db.upsert_event(mk("quiz-42", "Quiz 42 (Ch. 1 & 2)", "quiz", day(4, "09:00")), G, 1, 1)
+        s, _ = db.upsert_event(mk("quiz-42", "Study session for quiz 42", "plan", day(4, "18:00")), G, 1, 2)
+        self.assertEqual(s, "inserted")
+        self.assertEqual(len(db.list_events(30, G)), 2)
+
     def test_find_active_loose_matches_a_cancellation_by_title(self):
         db.upsert_event(mk("group-study-library", "Group study (library)", "plan", day(1, "16:00")), G, 1, 1)
         gone = mk("group-study", "Group study canceled", "plan", None)

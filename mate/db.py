@@ -70,6 +70,8 @@ def _match(rows, ev, loose=False):
     """The row `ev` refers to: same key; else same kind at the same minute, or same kind + near-identical title
     within a day. loose=True (cancellations, which carry no reliable date) also accepts same kind + similar title."""
     match = next((r for r in rows if r["key"] == ev.key), None)
+    if match is not None and match["kind"] != ev.kind and _similar(ev.title, match["title"]) < 0.5:
+        match = None          # the model reused a key for a different thing ('lab-42' vs 'quiz-42'): keep both
     if match is None:
         for r in rows:
             if r["kind"] != ev.kind:

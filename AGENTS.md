@@ -58,8 +58,10 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - Event kinds: `deadline` `quiz` `exam` `class_change` `announcement` `plan`. `plan` is student-organised
   stuff (trips, study sessions, meetups) — Mate is the group's memory, not just course admin.
 - Events dedupe on the model's `key` within a server; fallback is same kind at the same minute, or a
-  near-identical title within a day. A reschedule updates in place and clears its reminders. The extractor is
-  shown the server's upcoming items (key, title, time) so it reuses keys instead of inventing new ones.
+  near-identical title within a day. A reschedule updates in place and clears its reminders. A key reused for a
+  different kind of thing with an unrelated title is treated as new (the model once filed a lab under the quiz).
+  The extractor is deliberately not shown what is already remembered: tried, it made new items inherit old keys
+  and dates.
 - A cancellation ("the group study is canceled") comes back as the item with `cancelled=true`; ingest retires
   the matching event (status `superseded`), deletes its Discord event, and polls takes its poll down. ✅, no post.
   Anything dated within 10 minutes of its own message is dropped, whatever the kind.

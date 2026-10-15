@@ -115,15 +115,6 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(run(handlers.ingest(m)), 0)
         self.assertEqual(m.reactions_added, [])
 
-    def test_extractor_is_told_what_is_already_remembered(self):
-        run(handlers.ingest(FakeMessage("Quiz 2 will be on Wednesday 10am", self.sir, self.channel)))
-        seen = {}
-        async def spy(text, *a, known=(), **kw):
-            seen["known"] = [k["key"] for k in known]; return extract.Extraction(events=[], asks_memory=False)
-        extract.extract = spy
-        run(handlers.ingest(FakeMessage("Quiz 2 moved to Thursday", self.sir, self.channel)))
-        self.assertEqual(seen["known"], ["quiz-2"])
-
     def test_short_but_meaningful_message_reaches_extractor(self):
         calls = []
         async def spy(text, *a, **kw):

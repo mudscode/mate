@@ -116,7 +116,9 @@ class Run:
         moved = await poll_until(lambda: asyncio.sleep(0, result=(lambda r: r and len(r) == 1 and r[0][0] != before)(sql("SELECT due_at FROM events WHERE chat_id=? AND status='active' AND title LIKE ?", self.ch.id, f"%Quiz {TAG}%"))))
         check("one row, date changed", bool(moved))
         evs = await self.ch.guild.fetch_scheduled_events()
-        check("still one Events entry", sum(f"Quiz {TAG}" in e.name for e in evs) == 1)
+        quiz_evs = [e for e in evs if f"Quiz {TAG}" in e.name]
+        check("still one Events entry", len(quiz_evs) == 1,
+              "; ".join(f"{e.id} {e.start_time:%a %H:%M} {e.name!r}" for e in quiz_evs) or "none found")
 
         print("4. chatter -> silence")
         m = await self.say("lol did anyone actually understand the semaphore example")
@@ -199,6 +201,7 @@ class Run:
                 c.execute("DELETE FROM settings WHERE guild_id=? AND key='context' AND value LIKE ?", (self.ch.guild.id, f"%CS-{TAG}%"))
         for e in await self.ch.guild.fetch_scheduled_events():
             if TAG in e.name and e.creator_id == MATE_ID:
+                print(f"cleanup: deleting Discord event {e.id} {e.name!r}")
                 await e.delete(); n += 1
         with sqlite3.connect(config.DB_PATH) as c:
             ids = [r[0] for r in c.execute("SELECT id FROM events WHERE chat_id=? OR title LIKE ?", (self.ch.id, f"%{TAG}%"))]

@@ -75,8 +75,7 @@ async def ingest(message: discord.Message, react: bool = True) -> int:
     async with sem:
         res = await extract.extract(message.content, message.author.display_name, message.created_at,
                                     is_staff(message.author), atts, effort="medium" if atts else "low",
-                                    context=db.get_setting(guild_id, "context"),
-                                    known=db.list_events(200, guild_id))
+                                    context=db.get_setting(guild_id, "context"))
     heads_up, logged = None, []                       # logged: (event id, 'inserted' | 'updated' | 'cancelled')
     async with db_lock:
         for e in res.events:
