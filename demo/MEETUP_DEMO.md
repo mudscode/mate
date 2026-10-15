@@ -13,7 +13,7 @@ you three things and then four lessons."
 
 ## Three live beats, about 2 minutes
 
-Paste from a text file. Bot log visible in a second window. Talk only while something is happening.
+Paste from `demo/live_messages.txt` (the five lines below, in order). Bot log visible in a second window. Talk only while something is happening.
 
 | Clock | Paste | Expect | Say |
 |---|---|---|---|
@@ -26,7 +26,7 @@ Paste from a text file. Bot log visible in a second window. Talk only while some
 ## Three builder takeaways, about 2 minutes, one image each
 
 Images: `~/Downloads/Mate-takeaway-1.png` to `-3.png` (rendered from the diagrams; regenerate if the wording changes).
-Full "what to say" per image and the pushback answers are in `Mate-demo-script.pdf`.
+Full "what to say" per image, the pushback answers, setup, delivery and Q&A are in `~/Downloads/Mate-demo-pack.pdf` (one document).
 
 1. **Your first user should be an agent.** Fakes test logic; an agent that acts as the user and judges the
    result tests the agent, on the real platform. `scripts/e2e.py` is a second bot that plays student and
