@@ -2,7 +2,7 @@
 
 Saturday 17 October 2026, 2 to 5 PM PKT. Slide-free, live code, about 5 minutes plus questions (confirm with the host).
 Their rule: answer "how did you build this", never "why should someone use it". A diagram is allowed when it
-explains the work; no code walkthrough, there is no time for it.
+explains the work; no code walkthrough, there is no time for it. Three live beats, then three images.
 
 ## Pitch, 25 seconds
 
@@ -23,34 +23,31 @@ Paste from a text file. Bot log visible in a second window. Talk only while some
 | 1:40 | `study session for quiz 4 Friday 6pm at the library?` | ✅, heads-up about the quiz day, RSVP poll | "A plan, a clash warning, and a poll so nobody types plus-one twenty times." |
 | 2:05 | `the study session is canceled`, then ❌ on the Quiz 4 message | poll and entry gone; ✅ becomes 🗑️ | "Cancelled and undone. An agent that writes on its own has to be cheap to correct." |
 
-## Four builder takeaways, about 2 minutes, one diagram each
+## Three builder takeaways, about 2 minutes, one image each
 
-Diagrams and the full "what to say" and "if someone pushes back" text live in the published page
-"Mate Builder Takeaways" (see the conversation that produced it) and are summarised here.
+Images: `~/Downloads/Mate-takeaway-1.png` to `-3.png` (rendered from the diagrams; regenerate if the wording changes).
+Full "what to say" per image and the pushback answers are in `Mate-demo-script.pdf`.
 
-1. **Test your agent with a second account on the real platform.** Fakes test logic; the platform tests the
-   agent. `scripts/e2e.py` is a second bot that plays student and instructor against the running Mate, 23 checks,
-   four minutes, cleans up. Found four bugs no fake could show: lock starvation behind Discord's rate limit,
-   Quiz 42 merged into Quiz 2, Thursday on a Wednesday's date, and a regression caught two hours after it was made.
-   Say "scripted second account", not "autonomous agent". Defence: "that's an integration test" → yes, with the
-   platform in the loop; the bugs were platform behaviour. "Flaky because of the model" → the flake is the finding.
-2. **Own the hundred lines.** No orchestration framework. Hooks plus tool registry are 97 lines; core 817; seven
-   features 690, one file each; tests 1552. Not "no abstractions", but abstractions small enough to read in full
-   when they break. Defence: "frameworks save time" → the first hour, yes; the cost shows up three layers down.
-   "Doesn't scale to a team" → probably; this is where to start, not where to end.
-3. **The model proposes, code decides.** The model reads mixed English and Roman Urdu and proposes a datetime.
-   Python checks weekday, kal/parso, window, midnight rule, and finds the same item under a stable key. Wrong
-   dates are dropped, never stored. That is why gpt-5-mini is enough. Defence: "use a bigger model" → still gets
-   weekdays wrong sometimes, and the check is where domain rules live. "Why not parse in Python" → reading is the
-   model's job, arithmetic is Python's.
-4. **Context engineering is also subtraction.** Adding the weekday name to the timestamp fixed dates. Adding a
-   list of what Mate already remembered made a new lab come back as the existing quiz. Both were "more context";
-   the e2e run decided. Defence: "more relevant context always helps" → relevance to you and influence on the
-   model are different things; measure. Cut this takeaway if the host is signalling time.
+1. **Your first user should be an agent.** Fakes test logic; an agent that acts as the user and judges the
+   result tests the agent, on the real platform. `scripts/e2e.py` is a second bot that plays student and
+   instructor against the running Mate, judges 23 outcomes, four minutes, cleans up. Found four bugs no fake
+   could show: lock starvation behind Discord's rate limit, Quiz 42 merged into Quiz 2, Thursday on a
+   Wednesday's date, a regression caught two hours after it was made. Today the user is scripted; say so. The
+   lesson is one agent as user and judge. Defence: "that's an integration test" → yes, with the platform in
+   the loop; the bugs were platform behaviour. "Flaky because of the model" → the flake is the finding.
+2. **Own the hundred lines.** No orchestration framework. Hooks plus tool registry are 97 lines; core 817;
+   seven features 690, one file each; tests 1552. Not "no abstractions", but abstractions small enough to read
+   in full when they break. Defence: "frameworks save time" → the first hour, yes; the cost shows up three
+   layers down. "Doesn't scale to a team" → probably; this is where to start, not where to end.
+3. **More context can make it worse.** Adding the weekday name to the timestamp fixed dates. Adding a list of
+   what Mate already remembered made a new lab come back as the existing quiz. Both were "more context"; the
+   e2e run decided. Defence: "more relevant context always helps" → relevance to you and influence on the
+   model are different things; measure. "Prompt wording problem" → tried; what held was removing the list and
+   a code guard against key reuse across kinds.
 
 ## Close, 10 seconds
 
-"It's on GitHub, mudscode/mate. The e2e tester is the file I'd steal first. Happy to talk about any of the four."
+"It's on GitHub, mudscode/mate. The e2e tester is the file I'd steal first. Happy to talk about any of the three."
 
 ## Say / do not say
 
@@ -78,7 +75,7 @@ Night before
 Before walking up
 - Exactly one `bot.py` running. Check with `ps`. Two processes on one token double every action.
 - `.env` key works (the bot reads it once at start; restart after any change).
-- Discord zoomed in, bot log window open, the messages file open, the diagrams page open in a tab.
+- Discord zoomed in, bot log window open, the messages file open, the three images open in an image viewer.
 - Phone hotspot ready as a second network.
 
 If it breaks
