@@ -1,59 +1,64 @@
 # Mate at AI Tinkerers Islamabad / Rawalpindi, October Demo Meetup
 
 Saturday 17 October 2026, 2 to 5 PM PKT. Slide-free, live code, about 5 minutes plus questions (confirm with the host).
-Their rule: answer "how did you build this", never "why should someone use it".
+Their rule: answer "how did you build this", never "why should someone use it". A diagram is allowed when it
+explains the work; no code walkthrough, there is no time for it.
 
-## Pitch, 30 seconds
+## Pitch, 25 seconds
 
-Mate is a Discord bot that acts as a class's memory. Students and the instructor talk normally. Mate silently
-pulls out anything with a date, puts it in SQLite and the server's Events tab, answers "when's the quiz?" from
-memory, and reminds people before things are due without being asked. One Python process, one model, one
-SQLite file. Agent, not chatbot: it decides what to log, remembers across sessions, and acts unprompted.
+"I'm Mudassir. Side project. Mate is a Discord bot that acts as a class's memory. People talk normally, it
+silently remembers anything with a date, puts it in the server's Events tab, answers from memory, and reminds
+people before things are due without being asked. One Python process, one SQLite file, one model. Let me show
+you three things and then four lessons."
 
-## Three features, live, about 2.5 minutes
+## Three live beats, about 2 minutes
 
-Paste these from a text file. Keep the bot log visible in a second window so the room sees the calls happen.
+Paste from a text file. Bot log visible in a second window. Talk only while something is happening.
 
-1. **Log and reschedule.** The thesis in one minute.
-   - Type: `Quiz 4 is on Thursday 10am, chapters 7 and 8. Room 104.`
-   - Expect: only a ✅. Open the Events tab, the entry is there with the room as location.
-   - Type: `Quiz 4 moved to Friday 11am, same room.`
-   - Expect: ✅, the Events entry moves, still one entry. Say: the key is the thing, not the date, so this is an edit.
-2. **Ask in Roman Urdu, no mention.**
-   - Type: `quiz kab hai?`
-   - Expect: a reply naming Friday 11:00. Say: Python checked the weekday the model proposed before it was stored.
-3. **Cancel and undo.** Three ways to correct an agent that writes on its own.
-   - Type: `study session for quiz 4 Friday 6pm at the library?`
-   - Expect: ✅, a heads-up that it lands on the quiz day, an RSVP poll.
-   - Type: `the study session is canceled`
-   - Expect: ✅ only. Poll gone, Events entry gone, no new plan.
-   - React ❌ on the Quiz 4 message. Expect: ✅ becomes 🗑️, Events entry gone. Nothing posted.
+| Clock | Paste | Expect | Say |
+|---|---|---|---|
+| 0:25 | `Quiz 4 is on Thursday 10am, chapters 7 and 8. Room 104.` | ✅ only; Events tab entry with room | "It read that. Only a tick. Nothing posted. It's in the server's own calendar." |
+| 0:50 | `Quiz 4 moved to Friday 11am, same room.` | ✅; same entry moved, still one | "Each thing gets a stable name, never a date, so a reschedule is an edit." |
+| 1:15 | `quiz kab hai?` | reply naming Friday 11:00 | "No mention, Roman Urdu. Python checked that date against the weekday in the text before it was stored." |
+| 1:40 | `study session for quiz 4 Friday 6pm at the library?` | ✅, heads-up about the quiz day, RSVP poll | "A plan, a clash warning, and a poll so nobody types plus-one twenty times." |
+| 2:05 | `the study session is canceled`, then ❌ on the Quiz 4 message | poll and entry gone; ✅ becomes 🗑️ | "Cancelled and undone. An agent that writes on its own has to be cheap to correct." |
 
-## Code to show, about 90 seconds, font 20pt or larger
+## Four builder takeaways, about 2 minutes, one diagram each
 
-- `mate/extract.py`, `_plausible` and `day_words_match`: the model proposes, Python decides.
-- `mate/db.py`, `_match`: key, then same minute, then similar title with numbers agreeing.
-- `mate/hooks.py` and `mate/tools.py` together: the entire framework, 97 lines. Scroll it once.
+Diagrams and the full "what to say" and "if someone pushes back" text live in the published page
+"Mate Builder Takeaways" (see the conversation that produced it) and are summarised here.
 
-## Builder takeaways, about 60 seconds, pick what fits the clock
+1. **Test your agent with a second account on the real platform.** Fakes test logic; the platform tests the
+   agent. `scripts/e2e.py` is a second bot that plays student and instructor against the running Mate, 23 checks,
+   four minutes, cleans up. Found four bugs no fake could show: lock starvation behind Discord's rate limit,
+   Quiz 42 merged into Quiz 2, Thursday on a Wednesday's date, and a regression caught two hours after it was made.
+   Say "scripted second account", not "autonomous agent". Defence: "that's an integration test" → yes, with the
+   platform in the loop; the bugs were platform behaviour. "Flaky because of the model" → the flake is the finding.
+2. **Own the hundred lines.** No orchestration framework. Hooks plus tool registry are 97 lines; core 817; seven
+   features 690, one file each; tests 1552. Not "no abstractions", but abstractions small enough to read in full
+   when they break. Defence: "frameworks save time" → the first hour, yes; the cost shows up three layers down.
+   "Doesn't scale to a team" → probably; this is where to start, not where to end.
+3. **The model proposes, code decides.** The model reads mixed English and Roman Urdu and proposes a datetime.
+   Python checks weekday, kal/parso, window, midnight rule, and finds the same item under a stable key. Wrong
+   dates are dropped, never stored. That is why gpt-5-mini is enough. Defence: "use a bigger model" → still gets
+   weekdays wrong sometimes, and the check is where domain rules live. "Why not parse in Python" → reading is the
+   model's job, arithmetic is Python's.
+4. **Context engineering is also subtraction.** Adding the weekday name to the timestamp fixed dates. Adding a
+   list of what Mate already remembered made a new lab come back as the existing quiz. Both were "more context";
+   the e2e run decided. Defence: "more relevant context always helps" → relevance to you and influence on the
+   model are different things; measure. Cut this takeaway if the host is signalling time.
 
-1. **A second account on the real platform tests the agent.** `scripts/e2e.py` is a tester bot that creates a
-   scratch channel, plays student and instructor, asserts 23 checks against the running bot, and cleans up.
-   It found what fakes could not: a shared lock starving a live message behind Discord's rate limit, Quiz 42
-   merging into Quiz 2, the model writing Thursday on a Wednesday, and this week a regression in two hours.
-   Say "scripted second account", not "autonomous agent"; it is scripted.
-2. **No framework. Own the hundred lines.** Core 817 lines, hooks plus tool registry 97, seven features 690,
-   tests 1552. Every feature is one file that registers at import. When it breaks you can read all of it.
-3. **Code validates what the model proposes.** Dates are checked against the weekday in the text, a window,
-   the midnight rule. The same pattern fits amounts, IDs, names. It is why a small model is enough.
-4. **Context engineering is also subtraction.** Adding the weekday name to the message anchor fixed dates.
-   Adding a list of what Mate already remembered made it worse: a lab became the quiz. The e2e run decided.
+## Close, 10 seconds
 
-## Numbers, if asked
+"It's on GitHub, mudscode/mate. The e2e tester is the file I'd steal first. Happy to talk about any of the four."
 
-47 commits. 80 offline tests, 4 live model tests, 23 end-to-end checks. Model gpt-5-mini via the Responses API,
-structured outputs for extraction, function calling for Q&A. Reasoning effort low for chat, medium for PDFs.
-Dependencies: discord.py, openai, pydantic, python-dotenv.
+## Say / do not say
+
+Say: "side project", "I built", "it broke when"; one sentence then show; the numbers (97, 23, four bugs, two
+hours); the limits before anyone asks (scripted, small, single process); the model and API once.
+
+Do not say: the hackathon placing or any ranking; "revolutionary", "powered by AI"; a feature list; "sorry it's
+slow"; anything you must read off the screen; "it's a chatbot that".
 
 ## Not shown, one sentence each if asked
 
@@ -67,16 +72,17 @@ Night before
 - `python scripts/reset.py` so memory and the Events tab are empty. It keeps `!context`.
 - Check `!context` reads as the CS-321 sentence. Set it if not.
 - Optional: paste `demo/seed_chat.txt` as one message so the Events tab is not empty on stage. Its dates are
-  after 17 October and do not collide with the live messages above.
-- `scripts/test.sh` green. Run `python scripts/e2e.py` once against the running bot: 23/23.
+  after 17 October and do not collide with the live messages above (six events, none on Thu 22 or Fri 23).
+- `scripts/test.sh` green. `python scripts/e2e.py` against the running bot: 23/23. Keep its output for the talk.
 
 Before walking up
 - Exactly one `bot.py` running. Check with `ps`. Two processes on one token double every action.
 - `.env` key works (the bot reads it once at start; restart after any change).
-- Terminal font up, bot log window open, the messages file open, Discord zoomed in.
+- Discord zoomed in, bot log window open, the messages file open, the diagrams page open in a tab.
 - Phone hotspot ready as a second network.
 
-Fallbacks
-- Model slow or down: `!schedule` lists memory with no model call. Say so and keep going.
-- Events tab did not update: it mirrors last and is rate-limited; show the `!schedule` line instead.
-- A message was mis-logged: ❌ it. That is the undo demo anyway.
+If it breaks
+- Model slow: keep talking, then `!schedule`. "That's the no-model fallback. Memory is a table."
+- Events tab lagging: it mirrors last because Discord rate-limits it. Say exactly that; it is takeaway 1's bug.
+- Something mis-logged: ❌ it. "This is the undo."
+- Discord down: skip the beats, start at the diagrams with last night's e2e output.
