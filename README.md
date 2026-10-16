@@ -96,7 +96,7 @@ A feature is one file in `mate/features/`: it registers hooks and Q&A tools on i
 and is listed in `mate/features/__init__.py`. `bot.py` doesn't change.
 
 ## Demo assets
-- `demo/seed_chat.txt` – paste into the class channel as one message; second half of the semester, dates after 17 Oct 2026
+- `demo/seed_chat.txt` – paste its text into the class channel as one message (not the file); three events after 17 Oct 2026
 - `demo/course_outline.pdf` – drop into the channel; adds the rest of the semester in one go
 - `demo/quiz4_revision_slides.pdf` – four dateless slides; drop it, then ask "where are the quiz 4 slides?" for a jump link
 - `demo/VIDEO_SCRIPT.md` – the two-minute hackathon demo, beat by beat

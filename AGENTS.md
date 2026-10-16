@@ -106,7 +106,7 @@ in git; tag `meetup-17oct` is the code that was on stage. Six live beats, same a
 4. "where are the quiz 4 slides?" → filename, who posted it, jump link. No mention needed.
 5. "study session for quiz 4 Friday 6pm at the library?" → ✅, heads-up about the quiz day, RSVP poll.
 6. "the study session is canceled", then ❌ on the Quiz 4 message → poll and entry gone; ✅ becomes 🗑️.
-Night before: `reset.py`, check `!context`, paste `demo/seed_chat.txt` (six events, none on Thu 22 / Fri 23), run e2e.
+Night before: `reset.py`, check `!context`, paste the text of `demo/seed_chat.txt` (three events, none on Thu 22 / Fri 23), run e2e.
 
 Hackathon version (`demo/VIDEO_SCRIPT.md`, 12 Sep 2026):
 1. Channel is pre-seeded via `!backfill`. Ask "what's due this week?"

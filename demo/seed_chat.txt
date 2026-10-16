@@ -1,10 +1,4 @@
-Welcome back after the midterm. Second half of CS-321 Operating Systems, Fall 2026. Lectures Mon/Wed 10am in Room 104, lab Friday 2pm.
+Welcome back after the midterm. Second half of CS-321 Operating Systems.
 Monday 19 October lecture is in Room 204 instead of 104, the projector in 104 is being replaced.
-Assignment 2 (memory allocator) is due Friday 30 October 11:59pm on LMS. Late submissions lose 10% per day.
-sir are the midterm results out
-Midterm results will be on LMS by Wednesday 28 October. Average was 61.
-Quiz 5 will be on Wednesday 11 November at 10am, chapters 9 and 10. 15 minutes, closed book.
-Project demos are on Monday 30 November from 2pm in the lab. Each group gets 10 minutes.
-TA office hours are Tuesdays 3pm to 5pm, CS building room 12.
-lol did anyone actually understand the page replacement example
-Final exam is on Monday 14 December, 9am to 12pm, Main Auditorium. All chapters.
+Assignment 2 (memory allocator) is due Friday 30 October 11:59pm on LMS.
+Quiz 5 will be on Wednesday 11 November at 10am, chapters 9 and 10.
