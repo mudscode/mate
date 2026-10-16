@@ -33,7 +33,7 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - `mate/features/`          `polls` `resources` `personal_reminders` `digest` `context` `memory_edit` `undo` — one file each
 - `tests/`                  `fakes.py` (fake discord.py) + unit tests; `test_live.py` gated by `RUN_LIVE=1`
 - `scripts/`                `test.sh` `try_extract.py` `e2e.py` `reset.py` `seed.py`
-- `demo/`                   `seed_chat.txt` (paste as one message), `course_outline.pdf`, `VIDEO_SCRIPT.md` (hackathon), `takeaway-{1,2,3}.png` (meetup images); `private/` is gitignored stage material
+- `demo/`                   `seed_chat.txt` (paste as one message), `course_outline.pdf`, `quiz4_revision_slides.pdf` (dateless, for the file-find beat), `VIDEO_SCRIPT.md` (hackathon), `takeaway-{1,2,3}.png` (meetup images); `private/` is gitignored stage material
 - `PLAN.md`                 timeline, cut lines, demo script, gotchas. Read it.
 
 ## How to add a feature
@@ -46,7 +46,7 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - `scripts/test.sh` — the offline suite: fakes for discord.py, a throwaway DB, no network.
 - `RUN_LIVE=1 scripts/test.sh` — also runs `tests/test_live.py`, which makes real model calls.
 - `python scripts/e2e.py` — real Discord: a second "tester" bot creates a scratch channel, plays student and
-  instructor against a running `bot.py`, asserts 23 checks, and cleans up. Needs only `MATE_TEST_BOT_TOKEN`
+  instructor against a running `bot.py`, asserts 24 checks, and cleans up. Needs only `MATE_TEST_BOT_TOKEN`
   in `.env`; the tester's id is derived from the token.
 - `python scripts/reset.py` — fresh start: deletes `mate.db` and every scheduled event this bot created,
   keeping per-server `!context`. `python scripts/seed.py` re-posts the demo chat and PDF.

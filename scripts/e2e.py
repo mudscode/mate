@@ -23,6 +23,8 @@ import discord
 
 from mate import config
 
+ROOT = Path(__file__).resolve().parents[1]
+
 MATE_ID = config.bot_id_from_token(os.environ["DISCORD_BOT_TOKEN"])
 TAG = "42"                         # every title the run creates contains this, so cleanup can find it
 CHANNEL = "mate-e2e"
@@ -37,7 +39,7 @@ results = []
 
 
 def check(desc, ok, extra=""):
-    results.append(ok)
+    results.append(bool(ok))
     print(f"  {'ok  ' if ok else 'FAIL'} {desc}{'  ' + extra if extra else ''}")
     return ok
 
@@ -131,12 +133,16 @@ class Run:
         check("heads-up mentions the quiz", (await self.from_mate(m, want="heads up")) is not None)
         check("poll posted", (await self.from_mate(m, poll=True)) is not None)
 
-        print("6. file drop -> resource indexed -> jump link in the answer")
-        f = discord.File(io.BytesIO(b"slide 1\nslide 2\n"), filename=f"lecture{TAG}_slides.txt")
-        m = await self.say(f"lecture {TAG} slides", file=f)
+        print("6. file drop (the demo PDF) -> indexed silently, no stray event -> jump link in the answer")
+        active = lambda: sql("SELECT COUNT(*) FROM events WHERE chat_id=? AND status='active'", self.ch.id)[0][0]
+        n_before = active()
+        f = discord.File(str(ROOT / "demo" / "quiz4_revision_slides.pdf"), filename=f"quiz{TAG}_revision_slides.pdf")
+        m = await self.say(f"revision slides for quiz {TAG}", file=f)
         await poll_until(lambda: asyncio.sleep(0, result=sql("SELECT 1 FROM resources WHERE msg_id=?", m.id)))
         check("resource row", bool(sql("SELECT 1 FROM resources WHERE msg_id=?", m.id)))
-        q = await self.ask(f"where are the lecture {TAG} slides?")
+        await asyncio.sleep(15)                                   # give the extractor time to read the PDF
+        check("slides added no event", active() == n_before, f"active events {n_before} -> {active()}")
+        q = await self.say(f"where are the quiz {TAG} slides?")   # no mention, routed by the question regex
         r = await self.from_mate(q, want="discord.com/channels/", reply_to=q)
         check("answer has a jump link", r is not None, (r.content[:90] if r else ""))
 

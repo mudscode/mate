@@ -89,7 +89,7 @@ mate/
                        context.py memory_edit.py undo.py
 tests/                 fakes.py + unit tests (test_live.py needs RUN_LIVE=1)
 scripts/               test.sh try_extract.py e2e.py reset.py seed.py
-demo/                  seed_chat.txt course_outline.pdf VIDEO_SCRIPT.md takeaway-{1,2,3}.png
+demo/                  seed_chat.txt course_outline.pdf quiz4_revision_slides.pdf VIDEO_SCRIPT.md takeaway-{1,2,3}.png
 ```
 A feature is one file in `mate/features/`: it registers hooks and Q&A tools on import, owns its tables,
 and is listed in `mate/features/__init__.py`. `bot.py` doesn't change.
