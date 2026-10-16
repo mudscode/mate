@@ -46,7 +46,7 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
 - `scripts/test.sh` — the offline suite: fakes for discord.py, a throwaway DB, no network.
 - `RUN_LIVE=1 scripts/test.sh` — also runs `tests/test_live.py`, which makes real model calls.
 - `python scripts/e2e.py` — real Discord: a second "tester" bot creates a scratch channel, plays student and
-  instructor against a running `bot.py`, asserts 24 checks, and cleans up. Needs only `MATE_TEST_BOT_TOKEN`
+  instructor, drops `demo/quiz4_revision_slides.pdf`, asserts 24 checks, and cleans up. Needs only `MATE_TEST_BOT_TOKEN`
   in `.env`; the tester's id is derived from the token.
 - `python scripts/reset.py` — fresh start: deletes `mate.db` and every scheduled event this bot created,
   keeping per-server `!context`. `python scripts/seed.py` re-posts the demo chat and PDF.
@@ -98,7 +98,17 @@ Pitch: it decides what to log, remembers across sessions, and acts unprompted. A
     python bot.py
 
 ## Demo
-Meetup pack (AI Tinkerers Islamabad, 17 Oct 2026) lives in `demo/private/`, not in git. Hackathon script: `demo/VIDEO_SCRIPT.md`. Live version:
+Meetup (AI Tinkerers Islamabad, 17 Oct 2026): the pack, the paste file and the images live in `demo/private/`, not
+in git; tag `meetup-17oct` is the code that was on stage. Six live beats, same account or a second one for the file:
+1. "Quiz 4 is on Thursday 10am, chapters 7 and 8. Room 104." → ✅ only, Events entry with the room.
+2. "Quiz 4 moved to Friday 11am, same room." → ✅, same entry moved, still one.
+3. Drop `demo/quiz4_revision_slides.pdf` with "revision slides for quiz 4" → nothing visible; the file is indexed.
+4. "where are the quiz 4 slides?" → filename, who posted it, jump link. No mention needed.
+5. "study session for quiz 4 Friday 6pm at the library?" → ✅, heads-up about the quiz day, RSVP poll.
+6. "the study session is canceled", then ❌ on the Quiz 4 message → poll and entry gone; ✅ becomes 🗑️.
+Night before: `reset.py`, check `!context`, paste `demo/seed_chat.txt` (six events, none on Thu 22 / Fri 23), run e2e.
+
+Hackathon version (`demo/VIDEO_SCRIPT.md`, 12 Sep 2026):
 1. Channel is pre-seeded via `!backfill`. Ask "what's due this week?"
 2. Instructor: "Quiz 3 moved to Thursday 9am." Bot reacts ✅. Ask again; answer changed, no duplicate,
    and the Events tab entry moved with it.

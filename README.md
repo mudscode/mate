@@ -73,7 +73,8 @@ Paste a real class chat into the channel (one message per line is fine), then `!
 - `scripts/test.sh` – offline suite; fake discord.py, throwaway DB, no network.
 - `RUN_LIVE=1 scripts/test.sh` – also runs the tests that call the real model.
 - `python scripts/e2e.py` – real Discord, no hands: a second tester bot creates a scratch channel, plays
-  student and instructor against a running `bot.py`, asserts 23 checks, and cleans up. Needs only
+  student and instructor against a running `bot.py`, drops `demo/quiz4_revision_slides.pdf`, asserts 24 checks,
+  and cleans up. Needs only
   `MATE_TEST_BOT_TOKEN` in `.env`.
 - `python scripts/reset.py` – fresh start: deletes `mate.db` and the bot's own scheduled events.
 - `python scripts/seed.py` – re-posts the demo chat and PDF into a channel and waits for the ✅s.
@@ -97,5 +98,7 @@ and is listed in `mate/features/__init__.py`. `bot.py` doesn't change.
 ## Demo assets
 - `demo/seed_chat.txt` – paste into the class channel as one message; second half of the semester, dates after 17 Oct 2026
 - `demo/course_outline.pdf` – drop into the channel; adds the rest of the semester in one go
+- `demo/quiz4_revision_slides.pdf` – four dateless slides; drop it, then ask "where are the quiz 4 slides?" for a jump link
 - `demo/VIDEO_SCRIPT.md` – the two-minute hackathon demo, beat by beat
 - `demo/takeaway-{1,2,3}.png` – the three builder takeaways shown at the AI Tinkerers Islamabad October meetup
+- git tag `meetup-17oct` marks the code that was on stage on 17 Oct 2026
